@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تسجيل طلب النقل</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* Telegram injects the user's theme as --tg-theme-*; the fallbacks are the
+     light-theme values so the page still reads correctly in a plain browser.
+     Hairlines and fills are neutral rgba rather than color-mix(), which the
+     in-app webview may not support and which would collapse to an invalid
+     value, leaving borders missing entirely. */
+  :root {
+    --bg:        var(--tg-theme-bg-color, #ffffff);
+    --page:      var(--tg-theme-secondary-bg-color, #eef0f4);
+    --fg:        var(--tg-theme-text-color, #0f1115);
+    --hint:      var(--tg-theme-hint-color, #8a8f98);
+    --accent:    var(--tg-theme-button-color, #2f86d4);
+    --accent-fg: var(--tg-theme-button-text-color, #ffffff);
+    --danger:    var(--tg-theme-destructive-text-color, #e5484d);
+    --sep:   rgba(128,128,128,.18);
+    --fill:  rgba(128,128,128,.10);
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 16px rgba(16,24,40,.05);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 0 0 calc(30px + env(safe-area-inset-bottom));
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Arabic", "Segoe UI",
+          "Noto Sans Arabic", Roboto, system-ui, sans-serif;
+    background: var(--page); color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- hero -------------------------------------------------------------- */
+  .hero {
+    background: linear-gradient(160deg, var(--accent), rgba(47,134,212,.82));
+    color: var(--accent-fg);
+    padding: 26px 20px 22px; border-radius: 0 0 24px 24px;
+    margin-bottom: 20px; box-shadow: 0 6px 22px rgba(47,134,212,.22);
+  }
+  .hero h1 { font-size: 21px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.2px; }
+  .hero p  { font-size: 13.5px; margin: 0 0 16px; opacity: .82; }
+  .track { display: flex; align-items: center; gap: 10px; }
+  .bar {
+    flex: 1; height: 5px; border-radius: 99px; overflow: hidden;
+    background: rgba(255,255,255,.28);
+  }
+  .bar span {
+    display: block; height: 100%; width: 0; border-radius: 99px;
+    background: var(--accent-fg); transition: width .35s cubic-bezier(.4,0,.2,1);
+  }
+  #ptext { font-size: 11.5px; margin: 0; flex: none; opacity: .9; font-weight: 500; }
+
+  /* --- grouped cards ----------------------------------------------------- */
+  .group { margin-bottom: 22px; }
+  .group > h2 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; color: var(--fg); opacity: .6;
+    margin: 0 0 9px; padding: 0 20px;
+  }
+  .group > h2 i {
+    font-style: normal; font-size: 13px; width: 22px; height: 22px; flex: none;
+    display: grid; place-items: center; border-radius: 7px; background: var(--fill);
+  }
+  .card {
+    background: var(--bg); border-radius: 16px; margin: 0 12px;
+    overflow: hidden; box-shadow: var(--shadow);
+  }
+
+  .field { padding: 13px 16px; position: relative; }
+  .field + .field::before {
+    content: ""; position: absolute; top: 0; inset-inline: 16px 0;
+    height: 1px; background: var(--sep);
+  }
+  .line { display: flex; align-items: center; gap: 12px; min-height: 30px; }
+  .line > label, .flabel {
+    font-size: 15px; font-weight: 500; flex: none; color: var(--fg);
+  }
+  .flabel { display: block; margin-bottom: 11px; }
+  .line > .chips { flex: 1; }
+  /* Native forms mark what is *optional* rather than starring six required
+     fields in red; required ones are caught on submit, next to the field. */
+  .opt { font-size: 11.5px; font-weight: 400; color: var(--hint); margin-inline-start: 6px; }
+  .opt::before { content: "· "; }
+
+  /* --- picker rows (open a sheet) & plain inputs -------------------------- */
+  .pick {
+    flex: 1; display: flex; align-items: center; justify-content: flex-end;
+    gap: 7px; background: none; border: 0; padding: 2px 0; cursor: pointer;
+    font: 500 16px/1.4 inherit; color: var(--fg); text-align: left;
+  }
+  .pick.empty { color: var(--hint); font-weight: 400; }
+  .pick::after {
+    content: ""; width: 11px; height: 7px; flex: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1.2 1.2 5.5 5.5 9.8 1.2' fill='none' stroke='%238a8f98' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+  }
+  input[type=text], input[type=tel], input[type=number] {
+    flex: 1; min-width: 0; width: 100%;
+    border: 0; background: transparent; color: var(--fg);
+    font: 500 16px/1.4 inherit;   /* 16px stops iOS zooming the page on focus */
+    padding: 2px 0; text-align: left; direction: rtl;
+    appearance: none; -webkit-appearance: none;
+  }
+  input::placeholder { color: var(--hint); font-weight: 400; }
+  input:focus { outline: none; }
+  select.native { display: none; }   /* value store for the sheet pickers */
+
+  /* --- pills ------------------------------------------------------------- */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 8px 14px; border-radius: 99px;
+    background: var(--fill); color: var(--fg);
+    font-size: 14px; font-weight: 500; cursor: pointer; user-select: none;
+    transition: background .14s, color .14s, transform .1s;
+  }
+  .chip:active { transform: scale(.94); }
+  .chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .chip.on {
+    background: var(--accent); color: var(--accent-fg); font-weight: 600;
+    box-shadow: 0 2px 8px rgba(47,134,212,.3);
+  }
+  .chip.on::before { content: "✓"; font-size: 11px; font-weight: 700; }
+
+  /* --- destinations, grouped by region ----------------------------------- */
+  .region + .region { margin-top: 14px; }
+  .region-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .region-head b { font-size: 12.5px; font-weight: 600; color: var(--hint); }
+  .all {
+    background: none; border: 0; padding: 2px 6px; cursor: pointer;
+    font: 600 12px/1 inherit; color: var(--accent); font-family: inherit;
+  }
+
+  /* --- collapsible ------------------------------------------------------- */
+  details summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center;
+    justify-content: space-between; font-size: 15px; font-weight: 500;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: ""; width: 11px; height: 7px; flex: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1.2 1.2 5.5 5.5 9.8 1.2' fill='none' stroke='%238a8f98' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
+    transition: transform .2s;
+  }
+  details[open] summary::after { transform: rotate(180deg); }
+  details[open] .chips { margin-top: 13px; }
+  .count { color: var(--accent); font-weight: 600; font-size: 13.5px; }
+  .count.muted { color: var(--hint); font-weight: 400; }
+
+  /* --- helper text & errors ---------------------------------------------- */
+  .hint { color: var(--hint); font-size: 12.5px; margin-top: 8px; }
+  .err { color: var(--danger); font-size: 12.5px; margin-top: 8px; display: none; font-weight: 500; }
+  .field.invalid .err { display: block; }
+  .field.invalid { background: rgba(229,72,77,.06); box-shadow: inset 2.5px 0 0 var(--danger); }
+
+  .hidden { display: none !important; }
+  .reveal { animation: reveal .22s cubic-bezier(.4,0,.2,1); }
+  @keyframes reveal { from { opacity: 0; transform: translateY(-5px) } to { opacity: 1; transform: none } }
+
+  /* --- picker sheet ------------------------------------------------------ */
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,.42);
+    z-index: 40; animation: fade .2s;
+  }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+  .sheet {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 41;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    max-height: 86vh; display: flex; flex-direction: column;
+    animation: rise .26s cubic-bezier(.32,.72,0,1);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  @keyframes rise { from { transform: translateY(100%) } to { transform: none } }
+  .sheet-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--sep); }
+  .sheet-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .sheet-top b { font-size: 16px; font-weight: 600; }
+  .sheet-top button {
+    background: none; border: 0; color: var(--accent); cursor: pointer;
+    font: 500 15px/1 inherit; font-family: inherit; padding: 4px;
+  }
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--fill); border-radius: 11px; padding: 10px 13px;
+  }
+  .search input {
+    flex: 1; border: 0; background: none; color: var(--fg);
+    font: 400 16px/1.3 inherit; outline: none; text-align: right;
+  }
+  .sheet-list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0 16px; }
+  .sheet-group {
+    padding: 14px 18px 6px; font-size: 12px; font-weight: 700;
+    color: var(--hint); letter-spacing: .3px;
+  }
+  .sheet-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 18px; cursor: pointer; font-size: 15.5px;
+  }
+  .sheet-item:active { background: var(--fill); }
+  .sheet-item .n { font-size: 12px; color: var(--hint); flex: none; }
+  .sheet-item.sel { color: var(--accent); font-weight: 600; }
+  .sheet-item.sel::after { content: "✓"; color: var(--accent); font-weight: 700; }
+  .empty-state { padding: 34px 18px; text-align: center; color: var(--hint); font-size: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* --- footer ------------------------------------------------------------ */
+  .foot { padding: 4px 16px 0; }
+  #fallback {
+    width: 100%; padding: 16px; background: var(--accent); color: var(--accent-fg);
+    border: 0; border-radius: 14px; font: 600 16px/1 inherit; font-family: inherit;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(47,134,212,.28);
+  }
+  #fallback:active { opacity: .88; transform: translateY(1px); }
+  #outside {
+    white-space: pre-wrap; word-break: break-all; direction: ltr; text-align: left;
+    background: var(--bg); border-radius: 14px; padding: 14px;
+    font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 0 0 14px; color: var(--fg);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>طلب النقل بالبديل</h1>
+  <p>املأ بياناتك مرة واحدة، وسنبحث لك عن بديل مطابق</p>
+  <div class="track">
+    <div class="bar"><span id="bar"></span></div>
+    <p id="ptext"></p>
+  </div>
+</div>
+
+<form id="f" novalidate>
+
+  <div class="group">
+    <h2><i data-icon="specialty"></i>التخصص</h2>
+    <div class="card">
+      <div class="field" id="fs-specialty">
+        <div class="line">
+          <label>تخصصك</label>
+          <button type="button" class="pick empty" id="pick-specialty">اختر…</button>
+          <select id="specialty" class="native" required></select>
+        </div>
+        <div class="err">اختر تخصصك من القائمة.</div>
+      </div>
+      <div class="field">
+        <details>
+          <summary>
+            <span>أقبل التبادل مع<span class="opt">اختياري</span></span>
+            <span class="count muted" id="accepts-count">لا شيء</span>
+          </summary>
+          <div class="chips" id="accepts"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2><i data-icon="job"></i>الوظيفة</h2>
+    <div class="card">
+      <div class="field" id="fs-job_type">
+        <div class="line">
+          <label>نوع الوظيفة</label>
+          <div class="chips" id="job_type"></div>
+        </div>
+        <div class="err">اختر نوع الوظيفة.</div>
+      </div>
+      <div class="field" id="fs-transfer_type">
+        <div class="line">
+          <label>نوع النقل</label>
+          <div class="chips" id="transfer_type"></div>
+        </div>
+        <div class="err">اختر نوع النقل.</div>
+      </div>
+      <!-- المرتبة is meaningful for خدمة مدنية only; revealed when chosen. -->
+      <div class="field hidden" id="fs-grade">
+        <div class="line">
+          <label for="grade">المرتبة<span class="opt">اختياري</span></label>
+          <input type="number" id="grade" min="1" max="15" inputmode="numeric" placeholder="مثال: ٧">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2><i data-icon="work"></i>مكان العمل الحالي</h2>
+    <div class="card">
+      <div class="field" id="fs-origin_area">
+        <div class="line">
+          <label>المدينة</label>
+          <button type="button" class="pick empty" id="pick-origin_area">اختر…</button>
+          <select id="origin_area" class="native" required></select>
+        </div>
+        <div class="err">اختر مدينة عملك.</div>
+      </div>
+      <!-- Only Riyadh and Jeddah are meaningfully multi-cluster. -->
+      <div class="field hidden" id="fs-origin_cluster">
+        <div class="line">
+          <label for="origin_cluster">التجمع<span class="opt">اختياري</span></label>
+          <select id="origin_cluster" style="flex:1;border:0;background:none;font:500 16px/1.4 inherit;color:var(--fg);text-align:left">
+            <option value="">لست متأكداً</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="fs-facility">
+        <div class="line">
+          <label for="facility">جهة العمل</label>
+          <input type="text" id="facility" maxlength="80" required placeholder="مستشفى الملك عبدالله">
+        </div>
+        <div class="err">اكتب اسم جهة عملك.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2><i data-icon="dest"></i>الوجهات المرغوبة</h2>
+    <div class="card">
+      <div class="field" id="fs-destinations">
+        <div id="destinations"></div>
+        <div class="err">اختر وجهة واحدة على الأقل.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2><i data-icon="contact"></i>التواصل</h2>
+    <div class="card">
+      <div class="field">
+        <div class="line">
+          <label>الجنس المطلوب<span class="opt">اختياري</span></label>
+          <div class="chips" id="gender"></div>
+        </div>
+      </div>
+      <div class="field" id="fs-contact">
+        <div class="line">
+          <label>طريقة التواصل</label>
+          <div class="chips" id="contact_method"></div>
+        </div>
+        <div id="wrap-phone" class="hidden" style="margin-top:12px">
+          <input type="tel" id="phone" inputmode="tel" placeholder="05xxxxxxxx">
+        </div>
+        <div class="hint" id="contact-hint"></div>
+        <div class="err" id="contact-err">اختر طريقة التواصل.</div>
+      </div>
+    </div>
+  </div>
+
+</form>
+
+<div class="foot">
+  <pre id="outside" class="hidden"></pre>
+  <button id="fallback" type="button">إرسال التسجيل</button>
+</div>
+
+<script>
+const DATA = {"specialty_groups": [{"label": "تمريض ورعاية", "items": [["nursing_specialist", "أخصائي تمريض", 6890], ["patient_care_tech", "فني رعاية مرضى", 4222], ["nursing_tech", "فني تمريض", 2805], ["health_security", "أمن صحي / مساعد صحي", 1421], ["nursing_generic", "تمريض (غير محدد)", 1110]]}, {"label": "أسنان", "items": [["dental_assistant", "فني مساعد طبيب أسنان", 5082], ["dentist", "طبيب أسنان", 3197], ["dental_lab_tech", "فني أسنان / تركيبات", 176], ["dental_hygiene", "وقاية أسنان", 0]]}, {"label": "مختبرات وأشعة", "items": [["lab", "مختبر", 1761], ["radiology", "أشعة", 1608], ["ecg_tech", "فني تخطيط قلب", 722]]}, {"label": "صيدلة وتغذية", "items": [["pharmacy", "صيدلة", 2037], ["nutrition", "تغذية", 1256]]}, {"label": "طب وعمليات", "items": [["sterilization_tech", "فني تعقيم", 1347], ["family_medicine", "طب أسرة", 768], ["emergency_med_tech", "فني طب طوارئ", 630], ["general_practitioner", "طبيب عام", 339], ["resident_physician", "طبيب مقيم", 288], ["operating_room", "فني عمليات", 210], ["anesthesia", "تخدير", 162], ["orthopedic_tech", "فني تجبير", 28]]}, {"label": "علاج وتأهيل", "items": [["physiotherapy", "علاج طبيعي", 1517], ["psychology", "أخصائي نفسي", 143], ["optometry", "بصريات", 91], ["respiratory", "علاج تنفسي", 84], ["speech_therapy", "نطق وتخاطب", 70], ["occupational_therapy", "علاج وظيفي", 59]]}, {"label": "إداري ومعلومات", "items": [["administrative", "إداري", 475], ["health_informatics", "معلوماتية صحية", 463], ["health_admin", "إدارة صحية", 299], ["medical_secretary", "سكرتارية طبية", 283], ["medical_records", "سجلات طبية", 178], ["accounting", "محاسب", 82], ["medical_coding", "ترميز طبي", 65], ["it", "حاسب / تقنية معلومات", 63], ["human_resources", "شؤون الموظفين", 54], ["health_insurance", "تأمين صحي", 26]]}, {"label": "صحة عامة وأخرى", "items": [["epidemiology", "وبائيات", 324], ["public_health", "صحة عامة", 294], ["disaster_mgmt", "إدارة كوارث", 110], ["social_work", "أخصائي اجتماعي", 59], ["biomedical_eng", "أجهزة طبية", 48], ["engineering", "هندسة", 12]]}], "areas": [["riyadh", "الرياض"], ["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"], ["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"], ["qassim", "القصيم"], ["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"], ["hail", "حائل"], ["tabuk", "تبوك"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]], "area_groups": [{"label": "الوسطى", "items": [["riyadh", "الرياض"], ["qassim", "القصيم"]]}, {"label": "الغربية", "items": [["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"]]}, {"label": "الشرقية", "items": [["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"]]}, {"label": "الجنوبية", "items": [["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"]]}, {"label": "الشمالية", "items": [["tabuk", "تبوك"], ["hail", "حائل"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]]}], "clusters": {"riyadh": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"], ["c3", "التجمع الثالث"]], "jeddah": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"]]}, "job_types": [["self_operated", "تشغيل ذاتي"], ["civil_service", "خدمة مدنية"]], "transfer_types": [["malak", "نقل ملاك"], ["taklif", "تكليف"], ["any", "أي منهما"]], "genders": [["any", "لا يهم"], ["male", "رجال"], ["female", "نساء"]], "contact_methods": [["telegram", "حسابي في تيليجرام"], ["phone", "رقم جوال"]]};
+
+const tg = window.Telegram && window.Telegram.WebApp;
+// telegram-web-app.js defines window.Telegram in *any* browser, so its mere
+// presence says nothing. initData is non-empty only when a Telegram client
+// actually launched us; outside one the page must fall back to its own submit
+// button, because MainButton renders nothing there.
+const IN_TG = !!(tg && tg.initData);
+// Telegram only reports a username when the account actually has one, which is
+// what decides whether "contact me on Telegram" is a usable option at all.
+const USERNAME = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+                  && tg.initDataUnsafe.user.username) || null;
+
+const $ = id => document.getElementById(id);
+const AR = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+const haptic = k => { if (IN_TG && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(k || "light"); };
+
+// Inline SVG rather than emoji: an emoji depends on the device having a colour
+// emoji font, and renders as an empty box where there is none.
+const ICONS = {
+  specialty: "M6 3v6a6 6 0 0 0 12 0V3M9 3H4m11 0h5M12 15v2a4 4 0 0 0 8 0v-1",
+  job: "M3 8h18v11H3zM8 8V5h8v3",
+  work: "M4 21V7l8-4 8 4v14M9 21v-6h6v6M12 9v3M10.5 10.5h3",
+  dest: "M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z M12 10h.01",
+  contact: "M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.2A8 8 0 1 1 20 11.5z",
+};
+for (const el of document.querySelectorAll("[data-icon]")) {
+  el.innerHTML =
+    `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+       <path d="${ICONS[el.dataset.icon]}"/>
+     </svg>`;
+}
+
+// Same folding the corpus parser applies, so searching "جده" finds "جدة" and
+// "اخصائي" finds "أخصائي" — without it a search box on Arabic text is a trap.
+const fold = s => s.replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه")
+                   .replace(/[ً-ْـ]/g, "").toLowerCase().trim();
+
+function option(sel, value, label) {
+  const o = document.createElement("option");
+  o.value = value; o.textContent = label;
+  sel.appendChild(o);
+}
+
+// Hidden <select>s stay the value store: collect(), validate() and
+// renderAccepts() all read .value, so the sheet UI is purely a front end.
+const SPECIALTIES = DATA.specialty_groups.map(g => ({
+  label: g.label, items: g.items.map(([k, l, n]) => ({key: k, label: l, n})),
+}));
+const AREA_GROUPS = DATA.area_groups.map(g => ({
+  label: g.label, items: g.items.map(([k, l]) => ({key: k, label: l})),
+}));
+// A <select> with no empty option defaults to its *first* one, so an untouched
+// form would silently submit the first specialty and the first area as if the
+// user had chosen them. The placeholder keeps "nothing picked" representable.
+for (const id of ["specialty", "origin_area"]) option($(id), "", "");
+for (const g of SPECIALTIES) for (const it of g.items) option($("specialty"), it.key, it.label);
+for (const g of AREA_GROUPS) for (const it of g.items) option($("origin_area"), it.key, it.label);
+
+const checked = name => [...document.querySelectorAll(`input[name=${name}]:checked`)].map(i => i.value);
+const radio = name => (document.querySelector(`input[name=${name}]:checked`) || {}).value || null;
+
+/* ---------------- searchable picker sheet ---------------- */
+let sheetEl = null;
+
+function openPicker({title, groups, current, placeholder, onPick}) {
+  closePicker();
+  const scrim = document.createElement("div");
+  scrim.className = "scrim";
+  const sheet = document.createElement("div");
+  sheet.className = "sheet";
+  sheet.innerHTML =
+    `<div class="sheet-head">
+       <div class="sheet-top"><b></b><button type="button">إلغاء</button></div>
+       <div class="search">
+         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" opacity=".45">
+           <circle cx="11" cy="11" r="7"/><path d="M20 20l-4.4-4.4"/>
+         </svg>
+         <input type="search" enterkeyhint="search">
+       </div>
+     </div>
+     <div class="sheet-list"></div>`;
+  sheet.querySelector("b").textContent = title;
+  const input = sheet.querySelector(".search input");
+  input.placeholder = placeholder;
+  const list = sheet.querySelector(".sheet-list");
+
+  function render(q) {
+    const needle = fold(q || "");
+    list.innerHTML = "";
+    let shown = 0;
+    for (const g of groups) {
+      const hits = g.items.filter(it => !needle || fold(it.label).includes(needle));
+      if (!hits.length) continue;
+      const h = document.createElement("div");
+      h.className = "sheet-group";
+      h.textContent = g.label;
+      list.appendChild(h);
+      for (const it of hits) {
+        shown++;
+        const row = document.createElement("div");
+        row.className = "sheet-item" + (it.key === current ? " sel" : "");
+        const name = document.createElement("span");
+        name.textContent = it.label;
+        row.appendChild(name);
+        if (it.n) {
+          const n = document.createElement("span");
+          n.className = "n";
+          n.textContent = AR(it.n.toLocaleString("en")) + " إعلان";
+          row.appendChild(n);
+        }
+        row.addEventListener("click", () => { haptic(); onPick(it); closePicker(); });
+        list.appendChild(row);
+      }
+    }
+    if (!shown) {
+      const e = document.createElement("div");
+      e.className = "empty-state";
+      e.textContent = "لا نتائج مطابقة";
+      list.appendChild(e);
+    }
+  }
+  render("");
+  input.addEventListener("input", () => render(input.value));
+  scrim.addEventListener("click", closePicker);
+  sheet.querySelector(".sheet-top button").addEventListener("click", closePicker);
+
+  document.body.append(scrim, sheet);
+  document.body.style.overflow = "hidden";
+  sheetEl = [scrim, sheet];
+  if (IN_TG && tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(closePicker); }
+}
+
+function closePicker() {
+  if (!sheetEl) return;
+  sheetEl.forEach(e => e.remove());
+  sheetEl = null;
+  document.body.style.overflow = "";
+  if (IN_TG && tg.BackButton) tg.BackButton.hide();
+}
+
+function bindPicker(btnId, selectId, title, groups, placeholder) {
+  $(btnId).addEventListener("click", () => openPicker({
+    title, groups, placeholder, current: $(selectId).value,
+    onPick: it => {
+      $(selectId).value = it.key;
+      $(btnId).textContent = it.label;
+      $(btnId).classList.remove("empty");
+      $(selectId).dispatchEvent(new Event("change", {bubbles: true}));
+    },
+  }));
+}
+bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES, "ابحث عن تخصص…");
+bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREA_GROUPS, "ابحث عن مدينة…");
+
+/* ---------------- pills ---------------- */
+function chips(host, name, items, type) {
+  host.innerHTML = "";
+  for (const [value, label] of items) host.appendChild(chip(name, value, label, type, host));
+}
+function chip(name, value, label, type, host) {
+  const l = document.createElement("label");
+  l.className = "chip";
+  l.innerHTML = `<input type="${type}" name="${name}" value="${value}"><span></span>`;
+  l.querySelector("span").textContent = label;
+  l.querySelector("input").addEventListener("change", e => {
+    // Radios fire no event on the option being *cleared*, so repaint the group.
+    if (type === "radio" && host) host.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
+    l.classList.toggle("on", e.target.checked);
+    haptic();
+    const f = l.closest(".field");
+    if (f) f.classList.remove("invalid");
+    progress();
+  });
+  return l;
+}
+
+chips($("job_type"), "job_type", DATA.job_types, "radio");
+chips($("transfer_type"), "transfer_type", DATA.transfer_types, "radio");
+chips($("gender"), "gender", DATA.genders, "radio");
+chips($("contact_method"), "contact_method", DATA.contact_methods, "radio");
+
+// collect() falls back to "any" when no gender is chosen, so show that as
+// selected from the start rather than sending a value nothing on screen states.
+const anyGender = document.querySelector('input[name=gender][value=any]');
+if (anyGender) { anyGender.checked = true; anyGender.closest(".chip").classList.add("on"); }
+
+// --- destinations, grouped by region with a whole-region shortcut
+for (const g of AREA_GROUPS) {
+  const wrap = document.createElement("div");
+  wrap.className = "region";
+  const head = document.createElement("div");
+  head.className = "region-head";
+  const b = document.createElement("b");
+  b.textContent = g.label;
+  const all = document.createElement("button");
+  all.type = "button"; all.className = "all"; all.textContent = "تحديد الكل";
+  head.append(b, all);
+  const box = document.createElement("div");
+  box.className = "chips";
+  for (const it of g.items) box.appendChild(chip("destinations", it.key, it.label, "checkbox"));
+  all.addEventListener("click", () => {
+    const inputs = [...box.querySelectorAll("input")];
+    const turnOn = !inputs.every(i => i.checked);   // toggles the whole region
+    inputs.forEach(i => {
+      i.checked = turnOn;
+      i.closest(".chip").classList.toggle("on", turnOn);
+    });
+    all.textContent = turnOn ? "إلغاء الكل" : "تحديد الكل";
+    haptic("medium");
+    $("fs-destinations").classList.remove("invalid");
+    progress();
+  });
+  wrap.append(head, box);
+  $("destinations").appendChild(wrap);
+}
+
+// accepts: the same 44, minus whichever is chosen as the primary specialty
+function renderAccepts() {
+  const chosen = $("specialty").value;
+  const picked = new Set(checked("accepts"));
+  const host = $("accepts");
+  host.innerHTML = "";
+  for (const g of SPECIALTIES) for (const it of g.items) {
+    if (it.key === chosen) continue;
+    const c = chip("accepts", it.key, it.label, "checkbox");
+    if (picked.has(it.key)) {
+      c.classList.add("on");
+      c.querySelector("input").checked = true;
+    }
+    c.querySelector("input").addEventListener("change", acceptsCount);
+    host.appendChild(c);
+  }
+  acceptsCount();
+}
+function acceptsCount() {
+  const n = checked("accepts").length;
+  const el = $("accepts-count");
+  el.textContent = n ? `${AR(n)} تخصص` : "لا شيء";
+  el.classList.toggle("muted", !n);
+}
+
+/* ---------------- progress ---------------- */
+const REQUIRED = [
+  () => $("specialty").value,
+  () => radio("job_type"),
+  () => radio("transfer_type"),
+  () => $("origin_area").value,
+  () => $("facility").value.trim(),
+  () => checked("destinations").length,
+];
+function progress() {
+  const done = REQUIRED.filter(f => f()).length;
+  $("bar").style.width = (done / REQUIRED.length * 100) + "%";
+  $("ptext").textContent = done === REQUIRED.length ? "جاهز للإرسال" : `${AR(done)} من ${AR(REQUIRED.length)}`;
+}
+
+function reveal(el, show) {
+  el.classList.toggle("hidden", !show);
+  if (show) { el.classList.remove("reveal"); void el.offsetWidth; el.classList.add("reveal"); }
+}
+
+/* ---------------- conditional fields ---------------- */
+$("job_type").addEventListener("change", () => {
+  reveal($("fs-grade"), radio("job_type") === "civil_service");
+});
+
+$("origin_area").addEventListener("change", () => {
+  const clusters = DATA.clusters[$("origin_area").value];
+  reveal($("fs-origin_cluster"), !!clusters);
+  const sel = $("origin_cluster");
+  sel.length = 1;
+  if (clusters) for (const [k, l] of clusters) option(sel, k, l);
+  $("fs-origin_area").classList.remove("invalid");
+  progress();
+});
+
+$("specialty").addEventListener("change", () => {
+  renderAccepts();
+  $("fs-specialty").classList.remove("invalid");
+  progress();
+});
+
+$("contact_method").addEventListener("change", () => {
+  const m = radio("contact_method");
+  reveal($("wrap-phone"), m === "phone");
+  $("contact-hint").textContent =
+    m === "telegram" && !USERNAME
+      ? "حسابك بدون اسم مستخدم — أضف اسم مستخدم في تيليجرام أو اختر رقم الجوال."
+      : m === "telegram" ? "سيراسلك الآخرون على @" + USERNAME : "";
+});
+
+for (const id of ["facility", "phone"]) {
+  $(id).addEventListener("input", () => {
+    $(id).closest(".field").classList.remove("invalid");
+    progress();
+  });
+}
+
+renderAccepts();
+progress();
+
+/* ---------------- submit ---------------- */
+function collect() {
+  const area = $("origin_area").value;
+  return {
+    v: 1,
+    specialty: $("specialty").value || null,
+    accepts: checked("accepts"),
+    job_type: radio("job_type"),
+    transfer_type: radio("transfer_type"),
+    grade: radio("job_type") === "civil_service" && $("grade").value
+             ? parseInt($("grade").value, 10) : null,
+    gender: radio("gender") || "any",
+    facility: $("facility").value.trim(),
+    origin_area: area || null,
+    origin_cluster: (DATA.clusters[area] && $("origin_cluster").value) || null,
+    destinations: checked("destinations"),
+    contact_method: radio("contact_method"),
+    phone: radio("contact_method") === "phone" ? $("phone").value.trim() : null,
+  };
+}
+
+// Every failing field is marked, not just the first: fixing one at a time and
+// resubmitting to discover the next is the worst part of a long form.
+function validate(d) {
+  document.querySelectorAll(".invalid").forEach(e => e.classList.remove("invalid"));
+  const bad = [];
+  const fail = (id, msg) => {
+    const f = $(id);
+    f.classList.add("invalid");
+    if (msg) f.querySelector(".err").textContent = msg;
+    bad.push(f);
+  };
+  if (!d.specialty) fail("fs-specialty");
+  if (!d.job_type) fail("fs-job_type");
+  if (!d.transfer_type) fail("fs-transfer_type");
+  if (!d.origin_area) fail("fs-origin_area");
+  if (!d.facility) fail("fs-facility");
+  if (!d.destinations.length) fail("fs-destinations");
+  if (!d.contact_method) fail("fs-contact", "اختر طريقة التواصل.");
+  // Arabic-Indic digits must be folded *before* stripping separators: JS \d is
+  // ASCII-only, so stripping first would delete ٠٥٥… entirely and reject a
+  // number the bot would have accepted.
+  else if (d.contact_method === "phone" && !/^(?:\+?966|00966|0)?5\d{8}$/.test(
+        d.phone.replace(/[٠-٩]/g, c => "٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/[^\d+]/g, "")))
+    fail("fs-contact", "اكتب رقم جوال سعودي صحيح. مثال: 05xxxxxxxx");
+  // Telegram-only contact is useless without a handle for others to open.
+  else if (d.contact_method === "telegram" && !USERNAME)
+    fail("fs-contact", "أضف اسم مستخدم في إعدادات تيليجرام، أو اختر رقم الجوال.");
+
+  if (!bad.length) return true;
+  bad[0].scrollIntoView({behavior: "smooth", block: "center"});
+  if (IN_TG && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+  return false;
+}
+
+function submit() {
+  const d = collect();
+  if (!validate(d)) return;
+  const payload = JSON.stringify(d);
+  if (IN_TG && tg.sendData) {
+    tg.sendData(payload);          // Telegram delivers this to the bot and closes us
+  } else {
+    // Opened outside Telegram (or from a link rather than a keyboard button,
+    // where sendData does not exist). Show the payload instead of an alert,
+    // which would block the page.
+    const box = $("outside");
+    box.textContent = "افتح هذه الصفحة من داخل تيليجرام لإرسال التسجيل.\n\n" + payload;
+    box.classList.remove("hidden");
+    box.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+}
+
+if (IN_TG) {
+  tg.ready();
+  tg.expand();
+  $("fallback").classList.add("hidden");   // MainButton replaces it
+  tg.MainButton.setText("إرسال التسجيل");
+  tg.MainButton.show();
+  tg.MainButton.onClick(submit);
+}
+$("fallback").addEventListener("click", submit);
+</script>
+</body>
+</html>
