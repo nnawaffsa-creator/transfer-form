@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>تسجيل طلب النقل</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -392,14 +392,23 @@ const DATA = {"specialty_groups": [{"label": "تمريض ورعاية", "items":
 
 const tg = window.Telegram && window.Telegram.WebApp;
 // telegram-web-app.js defines window.Telegram in *any* browser, so its mere
-// presence says nothing. initData is non-empty only when a Telegram client
-// actually launched us; outside one the page must fall back to its own submit
-// button, because MainButton renders nothing there.
-const IN_TG = !!(tg && tg.initData);
-// Telegram only reports a username when the account actually has one, which is
-// what decides whether "contact me on Telegram" is a usable option at all.
-const USERNAME = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user
-                  && tg.initDataUnsafe.user.username) || null;
+// presence says nothing. `platform` is the signal: a real client reports
+// "ios"/"android"/"tdesktop"/…, and the script reports "unknown" outside one.
+//
+// NOT initData — that is empty here by design. Only a web app opened from a
+// *reply-keyboard* button may call sendData(), and Telegram passes that flow
+// no init data at all (nothing needs authenticating: the payload arrives as an
+// ordinary message from the user's own account). Testing initData made IN_TG
+// false inside Telegram, so the page refused to send and told the user to open
+// it from Telegram — while they were already in Telegram.
+const IN_TG = !!(tg && tg.platform && tg.platform !== "unknown");
+// Consequence of the above: in this flow there is no user object either, so the
+// username is genuinely unknowable client-side. KNOWS_USER records that, and
+// the username checks below apply only when we actually know — otherwise the
+// bot, which sees the real account, does the checking and replies.
+const TG_USER = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+const KNOWS_USER = !!TG_USER;
+const USERNAME = (TG_USER && TG_USER.username) || null;
 
 const $ = id => document.getElementById(id);
 const AR = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
@@ -720,9 +729,10 @@ $("contact_method").addEventListener("change", () => {
   const m = radio("contact_method");
   reveal($("wrap-phone"), m === "phone");
   $("contact-hint").textContent =
-    m === "telegram" && !USERNAME
-      ? "حسابك بدون اسم مستخدم — أضف اسم مستخدم في تيليجرام أو اختر رقم الجوال."
-      : m === "telegram" ? "سيراسلك الآخرون على @" + USERNAME : "";
+    m !== "telegram" ? ""
+      : !KNOWS_USER ? "يجب أن يكون لحسابك اسم مستخدم (username) ليتمكن الآخرون من مراسلتك."
+      : USERNAME ? "سيراسلك الآخرون على @" + USERNAME
+      : "حسابك بدون اسم مستخدم — أضف اسم مستخدم في تيليجرام أو اختر رقم الجوال.";
 });
 
 for (const id of ["facility", "phone", "specialty_other", "origin_area_other"]) {
@@ -786,8 +796,11 @@ function validate(d) {
   else if (d.contact_method === "phone" && !/^(?:\+?966|00966|0)?5\d{8}$/.test(
         d.phone.replace(/[٠-٩]/g, c => "٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/[^\d+]/g, "")))
     fail("fs-contact", "اكتب رقم جوال سعودي صحيح. مثال: 05xxxxxxxx");
-  // Telegram-only contact is useless without a handle for others to open.
-  else if (d.contact_method === "telegram" && !USERNAME)
+  // Telegram-only contact is useless without a handle for others to open — but
+  // only block when we actually know the account has none. In the keyboard-button
+  // flow the username is unknowable here, and the bot rejects it with the same
+  // message using the real account.
+  else if (d.contact_method === "telegram" && KNOWS_USER && !USERNAME)
     fail("fs-contact", "أضف اسم مستخدم في إعدادات تيليجرام، أو اختر رقم الجوال.");
 
   if (!bad.length) return true;
