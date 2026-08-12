@@ -211,9 +211,10 @@
   }
   .sheet-item:active { background: var(--fill); }
   .sheet-item .n { font-size: 12px; color: var(--hint); flex: none; }
+  .sheet-item.pinned { color: var(--accent); font-weight: 600; }
   .sheet-item.sel { color: var(--accent); font-weight: 600; }
   .sheet-item.sel::after { content: "✓"; color: var(--accent); font-weight: 700; }
-  .empty-state { padding: 34px 18px; text-align: center; color: var(--hint); font-size: 14px; }
+  .empty-state { padding: 22px 18px 4px; text-align: center; color: var(--hint); font-size: 14px; }
 
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
@@ -453,7 +454,10 @@ const AREA_GROUPS = DATA.area_groups.map(g => ({
 // "أخرى" is offered only where free text can still be acted on. It is absent
 // from the accepted-swap list on purpose: matching builds an SQL IN over
 // canonical keys, so a typed value there could never match anyone.
-const OTHER = {key: "other", label: "أخرى — غير مذكور"};
+// `pinned` keeps it out of the search filter. Without that, searching for the
+// very thing that is not in the list also hides the only way to say so, and the
+// sheet answers "no results" with no way forward.
+const OTHER = {key: "other", label: "أخرى — غير مذكور", pinned: true};
 const SPECIALTIES_PICK = SPECIALTIES.concat([{label: "غير ذلك", items: [OTHER]}]);
 const AREAS_PICK = AREA_GROUPS.concat([{label: "غير ذلك", items: [OTHER]}]);
 // A <select> with no empty option defaults to its *first* one, so an untouched
@@ -498,23 +502,25 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
   const list = sheet.querySelector(".sheet-list");
 
   function render(q) {
-    const needle = fold(q || "");
+    const typed = (q || "").trim();
+    const needle = fold(typed);
     list.innerHTML = "";
     let shown = 0;
     for (const g of groups) {
-      const hits = g.items.filter(it => !needle || fold(it.label).includes(needle));
+      const hits = g.items.filter(it => it.pinned || !needle || fold(it.label).includes(needle));
       if (!hits.length) continue;
       const h = document.createElement("div");
       h.className = "sheet-group";
       h.textContent = g.label;
       list.appendChild(h);
       for (const it of hits) {
-        shown++;
+        if (!it.pinned) shown++;        // a pinned row is never a search "hit"
         const row = document.createElement("div");
         const on = multi ? chosen.has(it.key) : it.key === current;
-        row.className = "sheet-item" + (on ? " sel" : "");
+        row.className = "sheet-item" + (on ? " sel" : "") + (it.pinned ? " pinned" : "");
         const name = document.createElement("span");
-        name.textContent = it.label;
+        // Echo what they typed, so choosing أخرى visibly keeps their words.
+        name.textContent = it.pinned && typed ? `أخرى — «${typed}»` : it.label;
         row.appendChild(name);
         if (it.n) {
           const n = document.createElement("span");
@@ -524,7 +530,7 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
         }
         row.addEventListener("click", () => {
           haptic();
-          if (!multi) { onPick(it); closePicker(); return; }
+          if (!multi) { onPick(it, typed); closePicker(); return; }
           if (chosen.has(it.key)) chosen.delete(it.key); else chosen.add(it.key);
           row.classList.toggle("sel", chosen.has(it.key));
           onPick([...chosen]);          // live, so the row behind updates too
@@ -535,8 +541,12 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
     if (!shown) {
       const e = document.createElement("div");
       e.className = "empty-state";
-      e.textContent = "لا نتائج مطابقة";
-      list.appendChild(e);
+      // The pinned row is still on screen, so point at it instead of leaving
+      // a bare "no results" that looks like a dead end.
+      e.textContent = groups.some(g => g.items.some(it => it.pinned))
+        ? "لا يوجد تطابق — اختر «أخرى» بالأسفل واكتبه بنفسك"
+        : "لا نتائج مطابقة";
+      list.insertBefore(e, list.firstChild);
     }
   }
   render("");
@@ -558,19 +568,27 @@ function closePicker() {
   if (IN_TG && tg.BackButton) tg.BackButton.hide();
 }
 
-function bindPicker(btnId, selectId, title, groups, placeholder) {
+function bindPicker(btnId, selectId, title, groups, placeholder, otherId) {
   $(btnId).addEventListener("click", () => openPicker({
     title, groups, placeholder, current: $(selectId).value,
-    onPick: it => {
+    onPick: (it, typed) => {
       $(selectId).value = it.key;
       $(btnId).textContent = it.label;
       $(btnId).classList.remove("empty");
       $(selectId).dispatchEvent(new Event("change", {bubbles: true}));
+      // Carry the search text into the free-text field: they already typed
+      // the answer once looking for it, so do not make them type it again.
+      if (it.key === "other" && typed && otherId && !$(otherId).value) {
+        $(otherId).value = typed;
+        $(otherId).dispatchEvent(new Event("input", {bubbles: true}));
+      }
     },
   }));
 }
-bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES_PICK, "ابحث عن تخصص…");
-bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREAS_PICK, "ابحث عن مدينة…");
+bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES_PICK,
+           "ابحث عن تخصص…", "specialty_other");
+bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREAS_PICK,
+           "ابحث عن مدينة…", "origin_area_other");
 
 // The accepted-swap list is the same picker in multi mode, writing through to
 // the hidden checkboxes so checked("accepts") keeps working untouched.
