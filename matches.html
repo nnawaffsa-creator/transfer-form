@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>نتائج البحث عن بديل</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* Shares the registration form's tokens so the two pages read as one app.
+     Neutral rgba for hairlines rather than color-mix(), which the in-app
+     webview may not support. */
+  :root {
+    --bg:        var(--tg-theme-bg-color, #ffffff);
+    --page:      var(--tg-theme-secondary-bg-color, #eef0f4);
+    --fg:        var(--tg-theme-text-color, #0f1115);
+    --hint:      var(--tg-theme-hint-color, #8a8f98);
+    --accent:    var(--tg-theme-button-color, #2f86d4);
+    --accent-fg: var(--tg-theme-button-text-color, #ffffff);
+    --warn:      #b26a00;
+    --sep:   rgba(128,128,128,.18);
+    --fill:  rgba(128,128,128,.10);
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 16px rgba(16,24,40,.05);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 0 0 calc(30px + env(safe-area-inset-bottom));
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Arabic", "Segoe UI",
+          "Noto Sans Arabic", Roboto, system-ui, sans-serif;
+    background: var(--page); color: var(--fg); -webkit-font-smoothing: antialiased;
+  }
+
+  .hero {
+    background: linear-gradient(160deg, var(--accent), rgba(47,134,212,.82));
+    color: var(--accent-fg); padding: 24px 20px 20px;
+    border-radius: 0 0 24px 24px; margin-bottom: 18px;
+    box-shadow: 0 6px 22px rgba(47,134,212,.22);
+  }
+  .hero h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+  .hero p { font-size: 13.5px; margin: 0; opacity: .85; }
+
+  /* --- tabs -------------------------------------------------------------- */
+  .tabs { display: flex; gap: 8px; padding: 0 12px; margin-bottom: 16px; }
+  .tab {
+    flex: 1; padding: 11px 8px; border: 0; border-radius: 12px;
+    background: var(--fill); color: var(--fg); cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.2;
+  }
+  .tab.on { background: var(--accent); color: var(--accent-fg); }
+  .tab small { display: block; font-weight: 400; font-size: 11.5px; opacity: .75; }
+
+  .wrap { padding: 0 12px; }
+  .card {
+    background: var(--bg); border-radius: 16px; padding: 14px;
+    box-shadow: var(--shadow); margin-bottom: 10px;
+  }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .where { font-size: 16.5px; font-weight: 700; }
+  .what { font-size: 13px; color: var(--hint); }
+  .src {
+    font-size: 11px; color: var(--hint); background: var(--fill);
+    padding: 2px 7px; border-radius: 6px; flex: none;
+  }
+
+  /* Contact is the point of the whole page, so it is a real tappable target. */
+  .contact {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    margin-top: 12px; padding: 11px; border-radius: 11px;
+    background: var(--accent); color: var(--accent-fg);
+    font-size: 14.5px; font-weight: 600; text-decoration: none;
+  }
+  .contact:active { opacity: .85; }
+  .contact.none { background: var(--fill); color: var(--hint); font-weight: 500; }
+
+  .warn {
+    display: flex; gap: 6px; margin-top: 9px; padding: 8px 10px;
+    background: rgba(178,106,0,.09); border-radius: 9px;
+    color: var(--warn); font-size: 12.5px; font-weight: 500;
+  }
+
+  /* --- chains ------------------------------------------------------------ */
+  .lead {
+    font-size: 15px; font-weight: 700; margin-bottom: 2px;
+  }
+  .step {
+    display: flex; align-items: flex-start; gap: 9px;
+    padding: 9px 0 0;
+  }
+  .step + .step { border-top: 1px solid var(--sep); margin-top: 9px; }
+  .num {
+    flex: none; width: 21px; height: 21px; border-radius: 50%;
+    background: var(--fill); color: var(--hint);
+    font-size: 11.5px; font-weight: 700; display: grid; place-items: center;
+  }
+  .step.me .num { background: var(--accent); color: var(--accent-fg); }
+  .move { flex: 1; font-size: 14px; }
+  .move b { font-weight: 600; }
+  .move a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .age { font-size: 11.5px; color: var(--hint); margin-top: 10px; }
+
+  .empty { text-align: center; padding: 46px 24px; color: var(--hint); }
+  .empty b { display: block; color: var(--fg); font-size: 16px; margin-bottom: 6px; }
+  .note { text-align: center; color: var(--hint); font-size: 12px; padding: 6px 20px 0; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>نتائج البحث عن بديل</h1>
+  <p id="sub"></p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" id="tab-d" type="button">تبادل مباشر<small id="cd"></small></button>
+  <button class="tab" id="tab-c" type="button">تبادل ثلاثي<small id="cc"></small></button>
+</div>
+
+<div class="wrap">
+  <div id="pane-d"></div>
+  <div id="pane-c" class="hidden"></div>
+</div>
+<p class="note" id="note"></p>
+
+<script>
+const LABELS = {"areas": {"riyadh": "الرياض", "jeddah": "جدة", "makkah": "مكة المكرمة", "taif": "الطائف", "madinah": "المدينة المنورة", "eastern": "الشرقية", "ahsa": "الأحساء", "hafr": "حفر الباطن", "qassim": "القصيم", "asir": "عسير", "bisha": "بيشة", "jazan": "جازان", "najran": "نجران", "baha": "الباحة", "hail": "حائل", "tabuk": "تبوك", "northern": "الحدود الشمالية", "jouf": "الجوف", "qurayyat": "القريات"}, "specialties": {"dental_assistant": "فني مساعد طبيب أسنان", "dentist": "طبيب أسنان", "patient_care_tech": "فني رعاية مرضى", "nursing_specialist": "أخصائي تمريض", "nursing_tech": "فني تمريض", "nursing_generic": "تمريض (غير محدد)", "sterilization_tech": "فني تعقيم", "health_security": "أمن صحي / مساعد صحي", "ecg_tech": "فني تخطيط قلب", "lab": "مختبر", "physiotherapy": "علاج طبيعي", "radiology": "أشعة", "pharmacy": "صيدلة", "nutrition": "تغذية", "emergency_med_tech": "فني طب طوارئ", "respiratory": "علاج تنفسي", "anesthesia": "تخدير", "optometry": "بصريات", "family_medicine": "طب أسرة", "health_informatics": "معلوماتية صحية", "medical_records": "سجلات طبية", "social_work": "أخصائي اجتماعي", "epidemiology": "وبائيات", "dental_hygiene": "وقاية أسنان", "administrative": "إداري", "dental_lab_tech": "فني أسنان / تركيبات", "medical_coding": "ترميز طبي", "operating_room": "فني عمليات", "orthopedic_tech": "فني تجبير", "medical_secretary": "سكرتارية طبية", "psychology": "أخصائي نفسي", "speech_therapy": "نطق وتخاطب", "occupational_therapy": "علاج وظيفي", "public_health": "صحة عامة", "health_admin": "إدارة صحية", "accounting": "محاسب", "general_practitioner": "طبيب عام", "resident_physician": "طبيب مقيم", "disaster_mgmt": "إدارة كوارث", "biomedical_eng": "أجهزة طبية", "human_resources": "شؤون الموظفين", "health_insurance": "تأمين صحي", "it": "حاسب / تقنية معلومات", "engineering": "هندسة"}, "job_types": {"civil_service": "خدمة مدنية", "self_operated": "تشغيل ذاتي", "ministry": "ديوان الوزارة", "holding_co": "الصحة القابضة"}, "transfer_types": {"malak": "نقل ملاك", "taklif": "تكليف", "any": "أي منهما"}};
+
+const tg = window.Telegram && window.Telegram.WebApp;
+const IN_TG = !!(tg && tg.platform && tg.platform !== "unknown");
+if (IN_TG) { tg.ready(); tg.expand(); }
+
+const $ = id => document.getElementById(id);
+const AR = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+const area = k => LABELS.areas[k] || k || "—";
+const spec = k => LABELS.specialties[k] || k || "—";
+
+// The bot packs matches into ?d= because the page is static and has no
+// backend to ask. Keys only — labels come from LABELS, baked in at build time.
+let M = null;
+try {
+  const raw = new URLSearchParams(location.search).get("d");
+  if (raw) M = JSON.parse(raw);
+} catch (e) { M = null; }
+
+function blockerText(b) {
+  if (b.k === "job")      return "نوع الوظيفة مختلف (" + (LABELS.job_types[b.v] || b.v) + ")";
+  if (b.k === "transfer") return "نوع النقل مختلف (" + (LABELS.transfer_types[b.v] || b.v) + ")";
+  if (b.k === "grade")    return "المرتبة مختلفة (" + AR(b.v) + ")";
+  if (b.k === "area")     return "طلبه مكتوب «" + area(b.v) + "» — تأكد أنه يقبل " + area(b.m);
+  return "";
+}
+
+const SVG = {
+  phone: "M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11 11 0 0 0 3.5.55 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11 11 0 0 0 .55 3.5 1 1 0 0 1-.25 1z",
+  chat:  "M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.2A8 8 0 1 1 20 11.5z",
+  warn:  "M12 4 2.5 20h19zM12 10v4M12 17.2v.1",
+};
+function icon(name, size) {
+  return `<svg viewBox="0 0 24 24" width="${size||15}" height="${size||15}" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round"
+       stroke-linejoin="round"><path d="${SVG[name]}"/></svg>`;
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+// A phone opens the dialler, a username opens the chat. Anything else would
+// leave the reader with a name and no way to use it.
+function contactLink(m) {
+  if (m.p) {
+    const a = el("a", "contact");
+    a.innerHTML = icon("phone") + "<span>اتصال " + m.p + "</span>";
+    a.href = "tel:" + m.p.replace(/[^\d+]/g, "");
+    return a;
+  }
+  if (m.u) {
+    const a = el("a", "contact");
+    a.innerHTML = icon("chat") + "<span>مراسلة @" + m.u + "</span>";
+    a.href = "https://t.me/" + m.u;
+    if (IN_TG) a.addEventListener("click", ev => { ev.preventDefault(); tg.openTelegramLink(a.href); });
+    return a;
+  }
+  return el("div", "contact none", "لا تتوفر وسيلة تواصل");
+}
+
+function warnBox(b) {
+  const w = el("div", "warn");
+  w.innerHTML = icon("warn", 14) + "<span>" + blockerText(b) + "</span>";
+  return w;
+}
+
+function directCard(m) {
+  const c = el("div", "card");
+  const top = el("div", "top");
+  const left = el("div");
+  left.append(el("div", "where", area(m.a)), el("div", "what", spec(m.s)));
+  top.append(left, el("span", "src", m.src === "b" ? "مسجل في البوت" : "من المجموعات"));
+  c.append(top);
+  for (const b of m.b || []) c.append(warnBox(b));
+  c.append(contactLink(m));
+  return c;
+}
+
+function chainCard(ch) {
+  const c = el("div", "card");
+  c.append(el("div", "lead", "أنت تنتقل إلى " + area(ch[0].a)));
+
+  const mine = el("div", "step me");
+  mine.append(el("div", "num", "١"));
+  const m0 = el("div", "move");
+  m0.innerHTML = "<b>أنت</b>: من " + area(M.o) + " إلى " + area(ch[0].a);
+  mine.append(m0);
+  c.append(mine);
+
+  ch.forEach((h, i) => {
+    const to = i + 1 < ch.length ? area(ch[i + 1].a) : area(M.o);
+    const step = el("div", "step");
+    step.append(el("div", "num", "٠١٢٣٤٥"[i + 2]));
+    const mv = el("div", "move");
+    const who = h.u ? '<a href="https://t.me/' + h.u + '">@' + h.u + "</a>"
+              : h.p ? '<a href="tel:' + h.p.replace(/[^\d+]/g, "") + '">' + h.p + "</a>"
+              : "طرف ثالث";
+    mv.innerHTML = who + ": من " + area(h.a) + " إلى " + to +
+                   (i + 1 === ch.length ? " <b>(مقرك)</b>" : "");
+    for (const b of h.b || []) {
+      mv.append(warnBox(b));
+    }
+    step.append(mv);
+    c.append(step);
+  });
+
+  const oldest = ch.map(h => h.l).filter(Boolean).sort()[0];
+  if (oldest) c.append(el("div", "age", "أقدم إعلان في السلسلة: " + oldest));
+  return c;
+}
+
+function render() {
+  if (!M) {
+    $("sub").textContent = "";
+    $("pane-d").append(emptyBox("تعذّر قراءة النتائج", "أرسل /matches من جديد داخل المحادثة."));
+    return;
+  }
+  $("sub").textContent = spec(M.s) + " · " + area(M.o);
+  $("cd").textContent = AR(M.nd);
+  $("cc").textContent = AR(M.nc);
+
+  const d = $("pane-d"), c = $("pane-c");
+  if (M.d.length) M.d.forEach(m => d.append(directCard(m)));
+  else d.append(emptyBox("لا يوجد تبادل مباشر",
+        "سنخبرك فور ظهور شخص يريد مقرك وترغب بمقره."));
+  if (M.c.length) M.c.forEach(ch => c.append(chainCard(ch)));
+  else c.append(emptyBox("لا توجد سلاسل ثلاثية",
+        "السلسلة تحتاج ثلاثة أطراف يكمل كل واحد نقل الآخر."));
+
+  // Say what was left out rather than silently showing a shorter list.
+  const cut = [];
+  if (M.nd > M.d.length) cut.push("عرضنا " + AR(M.d.length) + " من " + AR(M.nd) + " تبادل مباشر");
+  if (M.nc > M.c.length) cut.push(AR(M.c.length) + " من " + AR(M.nc) + " سلسلة");
+  if (cut.length) $("note").textContent = cut.join(" · ");
+}
+
+function emptyBox(title, sub) {
+  const e = el("div", "empty");
+  e.append(el("b", null, title), el("div", null, sub));
+  return e;
+}
+
+$("tab-d").addEventListener("click", () => show("d"));
+$("tab-c").addEventListener("click", () => show("c"));
+function show(which) {
+  $("tab-d").classList.toggle("on", which === "d");
+  $("tab-c").classList.toggle("on", which === "c");
+  $("pane-d").classList.toggle("hidden", which !== "d");
+  $("pane-c").classList.toggle("hidden", which !== "c");
+  if (IN_TG && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+}
+
+render();
+</script>
+</body>
+</html>
