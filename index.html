@@ -250,14 +250,21 @@
         </div>
         <div class="err">اختر تخصصك من القائمة.</div>
       </div>
+      <!-- Free text in the "specialty" picker: revealed by choosing أخرى. -->
+      <div class="field hidden" id="fs-specialty-other">
+        <div class="line">
+          <label for="specialty_other">اكتب تخصصك</label>
+          <input type="text" id="specialty_other" maxlength="80" placeholder="مثال: أخصائي تخاطب">
+        </div>
+        <div class="err">اكتب اسم تخصصك.</div>
+      </div>
       <div class="field">
-        <details>
-          <summary>
-            <span>أقبل التبادل مع<span class="opt">اختياري</span></span>
-            <span class="count muted" id="accepts-count">لا شيء</span>
-          </summary>
-          <div class="chips" id="accepts"></div>
-        </details>
+        <div class="line">
+          <label>أقبل التبادل مع<span class="opt">اختياري</span></label>
+          <button type="button" class="pick empty" id="pick-accepts">لا شيء</button>
+        </div>
+        <!-- Value store for the multi-select sheet; collect() reads these. -->
+        <div class="chips hidden" id="accepts"></div>
       </div>
     </div>
   </div>
@@ -300,6 +307,13 @@
         </div>
         <div class="err">اختر مدينة عملك.</div>
       </div>
+      <div class="field hidden" id="fs-origin_area-other">
+        <div class="line">
+          <label for="origin_area_other">اكتب المدينة</label>
+          <input type="text" id="origin_area_other" maxlength="80" placeholder="مثال: رفحاء">
+        </div>
+        <div class="err">اكتب اسم مدينتك.</div>
+      </div>
       <!-- Only Riyadh and Jeddah are meaningfully multi-cluster. -->
       <div class="field hidden" id="fs-origin_cluster">
         <div class="line">
@@ -307,6 +321,12 @@
           <select id="origin_cluster" style="flex:1;border:0;background:none;font:500 16px/1.4 inherit;color:var(--fg);text-align:left">
             <option value="">لست متأكداً</option>
           </select>
+        </div>
+      </div>
+      <div class="field hidden" id="fs-origin_cluster-other">
+        <div class="line">
+          <label for="origin_cluster_other">اكتب التجمع</label>
+          <input type="text" id="origin_cluster_other" maxlength="40" placeholder="اسم التجمع">
         </div>
       </div>
       <div class="field" id="fs-facility">
@@ -413,12 +433,19 @@ const SPECIALTIES = DATA.specialty_groups.map(g => ({
 const AREA_GROUPS = DATA.area_groups.map(g => ({
   label: g.label, items: g.items.map(([k, l]) => ({key: k, label: l})),
 }));
+// "أخرى" is offered only where free text can still be acted on. It is absent
+// from the accepted-swap list on purpose: matching builds an SQL IN over
+// canonical keys, so a typed value there could never match anyone.
+const OTHER = {key: "other", label: "أخرى — غير مذكور"};
+const SPECIALTIES_PICK = SPECIALTIES.concat([{label: "غير ذلك", items: [OTHER]}]);
+const AREAS_PICK = AREA_GROUPS.concat([{label: "غير ذلك", items: [OTHER]}]);
 // A <select> with no empty option defaults to its *first* one, so an untouched
 // form would silently submit the first specialty and the first area as if the
 // user had chosen them. The placeholder keeps "nothing picked" representable.
 for (const id of ["specialty", "origin_area"]) option($(id), "", "");
-for (const g of SPECIALTIES) for (const it of g.items) option($("specialty"), it.key, it.label);
-for (const g of AREA_GROUPS) for (const it of g.items) option($("origin_area"), it.key, it.label);
+for (const g of SPECIALTIES_PICK) for (const it of g.items) option($("specialty"), it.key, it.label);
+for (const g of AREAS_PICK) for (const it of g.items) option($("origin_area"), it.key, it.label);
+option($("origin_cluster"), "other", OTHER.label);
 
 const checked = name => [...document.querySelectorAll(`input[name=${name}]:checked`)].map(i => i.value);
 const radio = name => (document.querySelector(`input[name=${name}]:checked`) || {}).value || null;
@@ -426,15 +453,16 @@ const radio = name => (document.querySelector(`input[name=${name}]:checked`) || 
 /* ---------------- searchable picker sheet ---------------- */
 let sheetEl = null;
 
-function openPicker({title, groups, current, placeholder, onPick}) {
+function openPicker({title, groups, current, placeholder, onPick, multi, selected}) {
   closePicker();
+  const chosen = new Set(selected || []);
   const scrim = document.createElement("div");
   scrim.className = "scrim";
   const sheet = document.createElement("div");
   sheet.className = "sheet";
   sheet.innerHTML =
     `<div class="sheet-head">
-       <div class="sheet-top"><b></b><button type="button">إلغاء</button></div>
+       <div class="sheet-top"><b></b><button type="button"></button></div>
        <div class="search">
          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" opacity=".45">
@@ -445,6 +473,9 @@ function openPicker({title, groups, current, placeholder, onPick}) {
      </div>
      <div class="sheet-list"></div>`;
   sheet.querySelector("b").textContent = title;
+  // Multi-select stays open while you tick things, so its button confirms
+  // rather than discards.
+  sheet.querySelector(".sheet-top button").textContent = multi ? "تم" : "إلغاء";
   const input = sheet.querySelector(".search input");
   input.placeholder = placeholder;
   const list = sheet.querySelector(".sheet-list");
@@ -463,7 +494,8 @@ function openPicker({title, groups, current, placeholder, onPick}) {
       for (const it of hits) {
         shown++;
         const row = document.createElement("div");
-        row.className = "sheet-item" + (it.key === current ? " sel" : "");
+        const on = multi ? chosen.has(it.key) : it.key === current;
+        row.className = "sheet-item" + (on ? " sel" : "");
         const name = document.createElement("span");
         name.textContent = it.label;
         row.appendChild(name);
@@ -473,7 +505,13 @@ function openPicker({title, groups, current, placeholder, onPick}) {
           n.textContent = AR(it.n.toLocaleString("en")) + " إعلان";
           row.appendChild(n);
         }
-        row.addEventListener("click", () => { haptic(); onPick(it); closePicker(); });
+        row.addEventListener("click", () => {
+          haptic();
+          if (!multi) { onPick(it); closePicker(); return; }
+          if (chosen.has(it.key)) chosen.delete(it.key); else chosen.add(it.key);
+          row.classList.toggle("sel", chosen.has(it.key));
+          onPick([...chosen]);          // live, so the row behind updates too
+        });
         list.appendChild(row);
       }
     }
@@ -514,8 +552,30 @@ function bindPicker(btnId, selectId, title, groups, placeholder) {
     },
   }));
 }
-bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES, "ابحث عن تخصص…");
-bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREA_GROUPS, "ابحث عن مدينة…");
+bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES_PICK, "ابحث عن تخصص…");
+bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREAS_PICK, "ابحث عن مدينة…");
+
+// The accepted-swap list is the same picker in multi mode, writing through to
+// the hidden checkboxes so checked("accepts") keeps working untouched.
+$("pick-accepts").addEventListener("click", () => openPicker({
+  title: "أقبل التبادل مع", groups: SPECIALTIES, placeholder: "ابحث عن تخصص…",
+  multi: true, selected: checked("accepts"),
+  onPick: keys => {
+    const want = new Set(keys);
+    for (const i of $("accepts").querySelectorAll("input")) i.checked = want.has(i.value);
+    acceptsLabel();
+  },
+}));
+
+function acceptsLabel() {
+  const on = checked("accepts");
+  const btn = $("pick-accepts");
+  const label = k => (SPECIALTIES.flatMap(g => g.items).find(i => i.key === k) || {}).label || k;
+  btn.textContent = !on.length ? "لا شيء"
+    : on.length <= 2 ? on.map(label).join("، ")
+    : `${AR(on.length)} تخصصات`;
+  btn.classList.toggle("empty", !on.length);
+}
 
 /* ---------------- pills ---------------- */
 function chips(host, name, items, type) {
@@ -580,6 +640,8 @@ for (const g of AREA_GROUPS) {
 }
 
 // accepts: the same 44, minus whichever is chosen as the primary specialty
+// Hidden checkbox store, rebuilt when the primary specialty changes so it can
+// never contain the specialty the user already chose.
 function renderAccepts() {
   const chosen = $("specialty").value;
   const picked = new Set(checked("accepts"));
@@ -588,28 +650,19 @@ function renderAccepts() {
   for (const g of SPECIALTIES) for (const it of g.items) {
     if (it.key === chosen) continue;
     const c = chip("accepts", it.key, it.label, "checkbox");
-    if (picked.has(it.key)) {
-      c.classList.add("on");
-      c.querySelector("input").checked = true;
-    }
-    c.querySelector("input").addEventListener("change", acceptsCount);
+    if (picked.has(it.key)) c.querySelector("input").checked = true;
     host.appendChild(c);
   }
-  acceptsCount();
-}
-function acceptsCount() {
-  const n = checked("accepts").length;
-  const el = $("accepts-count");
-  el.textContent = n ? `${AR(n)} تخصص` : "لا شيء";
-  el.classList.toggle("muted", !n);
+  acceptsLabel();
 }
 
 /* ---------------- progress ---------------- */
+// "أخرى" is not answered until its text is filled in, so the pair counts once.
 const REQUIRED = [
-  () => $("specialty").value,
+  () => $("specialty").value && ($("specialty").value !== "other" || $("specialty_other").value.trim()),
   () => radio("job_type"),
   () => radio("transfer_type"),
-  () => $("origin_area").value,
+  () => $("origin_area").value && ($("origin_area").value !== "other" || $("origin_area_other").value.trim()),
   () => $("facility").value.trim(),
   () => checked("destinations").length,
 ];
@@ -630,16 +683,26 @@ $("job_type").addEventListener("change", () => {
 });
 
 $("origin_area").addEventListener("change", () => {
-  const clusters = DATA.clusters[$("origin_area").value];
+  const v = $("origin_area").value;
+  const clusters = DATA.clusters[v];
+  reveal($("fs-origin_area-other"), v === "other");
+  // A typed city has no known cluster list, but the user may still name one.
   reveal($("fs-origin_cluster"), !!clusters);
   const sel = $("origin_cluster");
   sel.length = 1;
   if (clusters) for (const [k, l] of clusters) option(sel, k, l);
+  if (clusters) option(sel, "other", OTHER.label);
+  reveal($("fs-origin_cluster-other"), false);
   $("fs-origin_area").classList.remove("invalid");
   progress();
 });
 
+$("origin_cluster").addEventListener("change", () => {
+  reveal($("fs-origin_cluster-other"), $("origin_cluster").value === "other");
+});
+
 $("specialty").addEventListener("change", () => {
+  reveal($("fs-specialty-other"), $("specialty").value === "other");
   renderAccepts();
   $("fs-specialty").classList.remove("invalid");
   progress();
@@ -654,7 +717,7 @@ $("contact_method").addEventListener("change", () => {
       : m === "telegram" ? "سيراسلك الآخرون على @" + USERNAME : "";
 });
 
-for (const id of ["facility", "phone"]) {
+for (const id of ["facility", "phone", "specialty_other", "origin_area_other"]) {
   $(id).addEventListener("input", () => {
     $(id).closest(".field").classList.remove("invalid");
     progress();
@@ -670,6 +733,7 @@ function collect() {
   return {
     v: 1,
     specialty: $("specialty").value || null,
+    specialty_other: $("specialty").value === "other" ? $("specialty_other").value.trim() : null,
     accepts: checked("accepts"),
     job_type: radio("job_type"),
     transfer_type: radio("transfer_type"),
@@ -678,7 +742,10 @@ function collect() {
     gender: radio("gender") || "any",
     facility: $("facility").value.trim(),
     origin_area: area || null,
+    origin_area_other: area === "other" ? $("origin_area_other").value.trim() : null,
     origin_cluster: (DATA.clusters[area] && $("origin_cluster").value) || null,
+    origin_cluster_other: $("origin_cluster").value === "other"
+      ? $("origin_cluster_other").value.trim() : null,
     destinations: checked("destinations"),
     contact_method: radio("contact_method"),
     phone: radio("contact_method") === "phone" ? $("phone").value.trim() : null,
@@ -697,9 +764,11 @@ function validate(d) {
     bad.push(f);
   };
   if (!d.specialty) fail("fs-specialty");
+  else if (d.specialty === "other" && !d.specialty_other) fail("fs-specialty-other");
   if (!d.job_type) fail("fs-job_type");
   if (!d.transfer_type) fail("fs-transfer_type");
   if (!d.origin_area) fail("fs-origin_area");
+  else if (d.origin_area === "other" && !d.origin_area_other) fail("fs-origin_area-other");
   if (!d.facility) fail("fs-facility");
   if (!d.destinations.length) fail("fs-destinations");
   if (!d.contact_method) fail("fs-contact", "اختر طريقة التواصل.");
