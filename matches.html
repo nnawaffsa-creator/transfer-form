@@ -112,7 +112,7 @@
 
 <div class="tabs">
   <button class="tab on" id="tab-d" type="button">تبادل مباشر<small id="cd"></small></button>
-  <button class="tab" id="tab-r" type="button">نفس المنطقة<small id="cr"></small></button>
+  <button class="tab" id="tab-r" type="button">يريدون منطقتك<small id="cr"></small></button>
   <button class="tab" id="tab-c" type="button">تبادل ثلاثي<small id="cc"></small></button>
 </div>
 
@@ -254,22 +254,22 @@ function render() {
   const d = $("pane-d"), c = $("pane-c"), r = $("pane-r");
   if (M.d.length) M.d.forEach(m => d.append(directCard(m)));
   else d.append(emptyBox("لا يوجد تبادل مباشر",
-        "جرّب تبويب «نفس المنطقة» — قد يقبل أحدهم مقرك وإن طلب مدينة مجاورة."));
+        "جرّب تبويب «يريدون منطقتك» — فيه من يطلب منطقتك وإن لم تكن مدينته ضمن وجهاتك."));
 
   // Region tab: people who asked for a neighbouring city in the same منطقة
   // إدارية. Anyone already in the city tab is filtered out bot-side, so this
   // only ever holds what the stricter search missed.
   const rg = M.g ? " (" + M.g + ")" : "";
   if ((M.r || []).length) {
-    const note = el("p", "note", "طلبوا مدينة أخرى في منطقتك" + rg +
-                    " — قد يقبلون مقرك، تأكد معهم.");
+    const note = el("p", "note", "نفس تخصصك ويطلبون الانتقال إلى منطقتك" + rg +
+                    " — مدينتهم قد لا تكون ضمن وجهاتك، تأكد معهم.");
     note.style.textAlign = "right";
     note.style.padding = "0 4px 10px";
     r.append(note);
     M.r.forEach(m => r.append(directCard(m)));
   } else {
-    r.append(emptyBox("لا يوجد في نفس المنطقة",
-      "لا أحد يطلب مدينة أخرى داخل منطقتك" + rg + " حالياً."));
+    r.append(emptyBox("لا أحد يطلب منطقتك",
+      "لا أحد في تخصصك يطلب الانتقال إلى منطقتك" + rg + " حالياً."));
   }
   if (M.c.length) M.c.forEach(ch => c.append(chainCard(ch)));
   else c.append(emptyBox("لا توجد سلاسل ثلاثية",
@@ -279,7 +279,7 @@ function render() {
   const cut = [];
   if (M.nd > M.d.length) cut.push("عرضنا " + AR(M.d.length) + " من " + AR(M.nd) + " تبادل مباشر");
   if (M.nc > M.c.length) cut.push(AR(M.c.length) + " من " + AR(M.nc) + " سلسلة");
-  if (M.nr > (M.r || []).length) cut.push(AR(M.r.length) + " من " + AR(M.nr) + " في نفس المنطقة");
+  if (M.nr > (M.r || []).length) cut.push(AR(M.r.length) + " من " + AR(M.nr) + " يريدون منطقتك");
   if (cut.length) $("note").textContent = cut.join(" · ");
 }
 
