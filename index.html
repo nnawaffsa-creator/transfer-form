@@ -486,6 +486,27 @@ const AREA_GROUPS = DATA.area_groups.map(g => ({
 const OTHER = {key: "other", label: "أخرى — غير مذكور", pinned: true};
 const SPECIALTIES_PICK = SPECIALTIES.concat([{label: "غير ذلك", items: [OTHER]}]);
 const AREAS_PICK = AREA_GROUPS.concat([{label: "غير ذلك", items: [OTHER]}]);
+
+// The origin picker searches the same 132 real city names as the destination
+// search — typing ينبع or الخرج resolves to the right area instead of forcing
+// the user to know which of the 19 clusters covers them. Sectioned by the 13
+// admin regions; each city row notes the area it registers under.
+const ORIGIN_GROUPS = (() => {
+  const areaLabel = Object.fromEntries(DATA.areas.map(([k, l]) => [k, l]));
+  const byArea = new Map(DATA.areas.map(([k, l]) => [k, [{key: k, label: l}]]));
+  for (const [name, area] of DATA.places)
+    byArea.get(area).push({key: area, label: name, note: areaLabel[area]});
+  const groups = [], byRegion = new Map();
+  for (const [k] of DATA.areas) {
+    const r = DATA.area_region[k];
+    if (!byRegion.has(r)) {
+      byRegion.set(r, {label: r === "الشرقية" ? "المنطقة الشرقية" : "منطقة " + r, items: []});
+      groups.push(byRegion.get(r));
+    }
+    byRegion.get(r).items.push(...byArea.get(k));
+  }
+  return groups.concat([{label: "غير ذلك", items: [OTHER]}]);
+})();
 // A <select> with no empty option defaults to its *first* one, so an untouched
 // form would silently submit the first specialty and the first area as if the
 // user had chosen them. The placeholder keeps "nothing picked" representable.
@@ -561,6 +582,11 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
           n.className = "n";
           n.textContent = AR(it.n.toLocaleString("en")) + " إعلان";
           row.appendChild(n);
+        } else if (it.note) {
+          const n = document.createElement("span");
+          n.className = "n";
+          n.textContent = it.note;
+          row.appendChild(n);
         }
         row.addEventListener("click", () => {
           haptic();
@@ -622,8 +648,24 @@ function bindPicker(btnId, selectId, title, groups, placeholder, otherId) {
 }
 bindPicker("pick-specialty", "specialty", "اختر تخصصك", SPECIALTIES_PICK,
            "ابحث عن تخصص…", "specialty_other");
-bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREAS_PICK,
-           "ابحث عن مدينة…", "origin_area_other");
+$("pick-origin_area").addEventListener("click", () => openPicker({
+  title: "مدينة عملك الحالية", groups: ORIGIN_GROUPS, placeholder: "ابحث عن مدينتك…",
+  onPick: (it, typed) => {
+    const sel = $("origin_area");
+    sel.value = it.key;
+    const btn = $("pick-origin_area");
+    // Echo what they picked: choosing ينبع shows "ينبع — المدينة المنورة",
+    // so the mapping is visible instead of silently swapping their answer.
+    btn.textContent = it.key === "other" ? it.label
+      : it.note ? `${it.label} — ${it.note}` : it.label;
+    btn.classList.remove("empty");
+    sel.dispatchEvent(new Event("change", {bubbles: true}));
+    if (it.key === "other" && typed && !$("origin_area_other").value) {
+      $("origin_area_other").value = typed;
+      $("origin_area_other").dispatchEvent(new Event("input", {bubbles: true}));
+    }
+  },
+}));
 
 // The accepted-swap list is the same picker in multi mode, writing through to
 // the hidden checkboxes so checked("accepts") keeps working untouched.
