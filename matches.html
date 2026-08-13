@@ -39,11 +39,11 @@
   .hero p { font-size: 13.5px; margin: 0; opacity: .85; }
 
   /* --- tabs -------------------------------------------------------------- */
-  .tabs { display: flex; gap: 8px; padding: 0 12px; margin-bottom: 16px; }
+  .tabs { display: flex; gap: 6px; padding: 0 12px; margin-bottom: 16px; }
   .tab {
-    flex: 1; padding: 11px 8px; border: 0; border-radius: 12px;
+    flex: 1; padding: 10px 6px; border: 0; border-radius: 12px;
     background: var(--fill); color: var(--fg); cursor: pointer;
-    font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.2;
+    font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.25;
   }
   .tab.on { background: var(--accent); color: var(--accent-fg); }
   .tab small { display: block; font-weight: 400; font-size: 11.5px; opacity: .75; }
@@ -112,11 +112,13 @@
 
 <div class="tabs">
   <button class="tab on" id="tab-d" type="button">تبادل مباشر<small id="cd"></small></button>
+  <button class="tab" id="tab-r" type="button">نفس المنطقة<small id="cr"></small></button>
   <button class="tab" id="tab-c" type="button">تبادل ثلاثي<small id="cc"></small></button>
 </div>
 
 <div class="wrap">
   <div id="pane-d"></div>
+  <div id="pane-r" class="hidden"></div>
   <div id="pane-c" class="hidden"></div>
 </div>
 <p class="note" id="note"></p>
@@ -198,6 +200,7 @@ function directCard(m) {
   const left = el("div");
   left.append(el("div", "where", area(m.a)), el("div", "what", spec(m.s)));
   top.append(left, el("span", "src", m.src === "b" ? "مسجل في البوت" : "من المجموعات"));
+  if (m.w && m.w !== M.o) left.append(el("div", "what", "يطلب: " + area(m.w)));
   c.append(top);
   for (const b of m.b || []) c.append(warnBox(b));
   c.append(contactLink(m));
@@ -245,12 +248,29 @@ function render() {
   }
   $("sub").textContent = spec(M.s) + " · " + area(M.o);
   $("cd").textContent = AR(M.nd);
+  $("cr").textContent = AR(M.nr || 0);
   $("cc").textContent = AR(M.nc);
 
-  const d = $("pane-d"), c = $("pane-c");
+  const d = $("pane-d"), c = $("pane-c"), r = $("pane-r");
   if (M.d.length) M.d.forEach(m => d.append(directCard(m)));
   else d.append(emptyBox("لا يوجد تبادل مباشر",
-        "سنخبرك فور ظهور شخص يريد مقرك وترغب بمقره."));
+        "جرّب تبويب «نفس المنطقة» — قد يقبل أحدهم مقرك وإن طلب مدينة مجاورة."));
+
+  // Region tab: people who asked for a neighbouring city in the same منطقة
+  // إدارية. Anyone already in the city tab is filtered out bot-side, so this
+  // only ever holds what the stricter search missed.
+  const rg = M.g ? " (" + M.g + ")" : "";
+  if ((M.r || []).length) {
+    const note = el("p", "note", "طلبوا مدينة أخرى في منطقتك" + rg +
+                    " — قد يقبلون مقرك، تأكد معهم.");
+    note.style.textAlign = "right";
+    note.style.padding = "0 4px 10px";
+    r.append(note);
+    M.r.forEach(m => r.append(directCard(m)));
+  } else {
+    r.append(emptyBox("لا يوجد في نفس المنطقة",
+      "لا أحد يطلب مدينة أخرى داخل منطقتك" + rg + " حالياً."));
+  }
   if (M.c.length) M.c.forEach(ch => c.append(chainCard(ch)));
   else c.append(emptyBox("لا توجد سلاسل ثلاثية",
         "السلسلة تحتاج ثلاثة أطراف يكمل كل واحد نقل الآخر."));
@@ -259,6 +279,7 @@ function render() {
   const cut = [];
   if (M.nd > M.d.length) cut.push("عرضنا " + AR(M.d.length) + " من " + AR(M.nd) + " تبادل مباشر");
   if (M.nc > M.c.length) cut.push(AR(M.c.length) + " من " + AR(M.nc) + " سلسلة");
+  if (M.nr > (M.r || []).length) cut.push(AR(M.r.length) + " من " + AR(M.nr) + " في نفس المنطقة");
   if (cut.length) $("note").textContent = cut.join(" · ");
 }
 
@@ -268,13 +289,13 @@ function emptyBox(title, sub) {
   return e;
 }
 
-$("tab-d").addEventListener("click", () => show("d"));
-$("tab-c").addEventListener("click", () => show("c"));
+const TABS = ["d", "r", "c"];
+for (const t of TABS) $("tab-" + t).addEventListener("click", () => show(t));
 function show(which) {
-  $("tab-d").classList.toggle("on", which === "d");
-  $("tab-c").classList.toggle("on", which === "c");
-  $("pane-d").classList.toggle("hidden", which !== "d");
-  $("pane-c").classList.toggle("hidden", which !== "c");
+  for (const t of TABS) {
+    $("tab-" + t).classList.toggle("on", t === which);
+    $("pane-" + t).classList.toggle("hidden", t !== which);
+  }
   if (IN_TG && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
 }
 
