@@ -278,8 +278,8 @@
       </div>
       <div class="field">
         <div class="line">
-          <label>أقبل التبادل مع<span class="opt">اختياري</span></label>
-          <button type="button" class="pick empty" id="pick-accepts">لا شيء</button>
+          <label>أقبل التبادل مع</label>
+          <button type="button" class="pick empty" id="pick-accepts">اختر تخصصك أولاً</button>
         </div>
         <!-- Value store for the multi-select sheet; collect() reads these. -->
         <div class="chips hidden" id="accepts"></div>
@@ -380,10 +380,11 @@
         <button type="button" class="citysearch" id="find-city">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
                stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.4-4.4"/></svg>
-          <span>لا تجد مدينتك؟ ابحث عنها</span>
+          <span>ابحث عن المدينة المرغوب الانتقال إليها</span>
         </button>
         <div id="city-note" class="hint hidden"></div>
         <div id="destinations"></div>
+        <div class="hint">اختر مدينة أو أكثر، أو منطقة كاملة لقبول أي مدينة فيها.</div>
         <div class="err">اختر وجهة واحدة على الأقل.</div>
       </div>
     </div>
@@ -414,7 +415,7 @@
 </div>
 
 <script>
-const DATA = {"specialty_groups": [{"label": "تمريض ورعاية", "items": [["nursing_specialist", "أخصائي تمريض", 6890], ["patient_care_tech", "فني رعاية مرضى", 4222], ["nursing_tech", "فني تمريض", 2805], ["health_security", "أمن صحي / مساعد صحي", 1421], ["nursing_generic", "تمريض (غير محدد)", 1110]]}, {"label": "أسنان", "items": [["dental_assistant", "فني مساعد طبيب أسنان", 5082], ["dentist", "طبيب أسنان", 3197], ["dental_lab_tech", "فني أسنان / تركيبات", 176], ["dental_hygiene", "وقاية أسنان", 0]]}, {"label": "مختبرات وأشعة", "items": [["lab", "مختبر", 1761], ["radiology", "أشعة", 1608], ["ecg_tech", "فني تخطيط قلب", 722]]}, {"label": "صيدلة وتغذية", "items": [["pharmacy", "صيدلة", 2037], ["nutrition", "تغذية", 1256]]}, {"label": "طب وعمليات", "items": [["sterilization_tech", "فني تعقيم", 1347], ["family_medicine", "طب أسرة", 768], ["emergency_med_tech", "فني طب طوارئ", 630], ["general_practitioner", "طبيب عام", 339], ["resident_physician", "طبيب مقيم", 288], ["operating_room", "فني عمليات", 210], ["anesthesia", "تخدير", 162], ["orthopedic_tech", "فني تجبير", 28]]}, {"label": "علاج وتأهيل", "items": [["physiotherapy", "علاج طبيعي", 1517], ["psychology", "أخصائي نفسي", 143], ["optometry", "بصريات", 91], ["respiratory", "علاج تنفسي", 84], ["speech_therapy", "نطق وتخاطب", 70], ["occupational_therapy", "علاج وظيفي", 59]]}, {"label": "إداري ومعلومات", "items": [["administrative", "إداري", 475], ["health_informatics", "معلوماتية صحية", 463], ["health_admin", "إدارة صحية", 299], ["medical_secretary", "سكرتارية طبية", 283], ["medical_records", "سجلات طبية", 178], ["accounting", "محاسب", 82], ["medical_coding", "ترميز طبي", 65], ["it", "حاسب / تقنية معلومات", 63], ["human_resources", "شؤون الموظفين", 54], ["health_insurance", "تأمين صحي", 26]]}, {"label": "صحة عامة وأخرى", "items": [["epidemiology", "وبائيات", 324], ["public_health", "صحة عامة", 294], ["disaster_mgmt", "إدارة كوارث", 110], ["social_work", "أخصائي اجتماعي", 59], ["biomedical_eng", "أجهزة طبية", 48], ["engineering", "هندسة", 12]]}], "areas": [["riyadh", "الرياض"], ["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"], ["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"], ["qassim", "القصيم"], ["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"], ["hail", "حائل"], ["tabuk", "تبوك"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]], "area_region": {"riyadh": "الرياض", "jeddah": "مكة المكرمة", "makkah": "مكة المكرمة", "taif": "مكة المكرمة", "madinah": "المدينة المنورة", "eastern": "الشرقية", "ahsa": "الشرقية", "hafr": "الشرقية", "qassim": "القصيم", "asir": "عسير", "bisha": "عسير", "jazan": "جازان", "najran": "نجران", "baha": "الباحة", "hail": "حائل", "tabuk": "تبوك", "northern": "الحدود الشمالية", "jouf": "الجوف", "qurayyat": "الجوف"}, "area_groups": [{"label": "الوسطى", "items": [["riyadh", "الرياض"], ["qassim", "القصيم"]]}, {"label": "الغربية", "items": [["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"]]}, {"label": "الشرقية", "items": [["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"]]}, {"label": "الجنوبية", "items": [["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"]]}, {"label": "الشمالية", "items": [["tabuk", "تبوك"], ["hail", "حائل"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]]}], "places": [["ابها", "asir"], ["ابو عريش", "jazan"], ["احد المسارحة", "jazan"], ["احد رفيدة", "asir"], ["اضم", "jeddah"], ["الاحساء", "ahsa"], ["الاحمر", "riyadh"], ["الاسياح", "qassim"], ["الافلاج", "riyadh"], ["البدايع", "qassim"], ["البدع", "tabuk"], ["البكيرية", "qassim"], ["الثغر", "jeddah"], ["الجبيل", "eastern"], ["الجموم", "makkah"], ["الحريق", "riyadh"], ["الحناكية", "madinah"], ["الخبر", "eastern"], ["الخرج", "riyadh"], ["الخرمة", "taif"], ["الخفجي", "eastern"], ["الدرب", "jazan"], ["الدرعية", "riyadh"], ["الدمام", "eastern"], ["الدوادمي", "riyadh"], ["الرس", "qassim"], ["الزلفي", "riyadh"], ["السليل", "riyadh"], ["الشرايع", "makkah"], ["الشنان", "hail"], ["الطايف", "taif"], ["الطوال", "jazan"], ["الظهران", "eastern"], ["العارضة", "jazan"], ["العقيق", "baha"], ["العلا", "madinah"], ["الغاط", "riyadh"], ["الغزالة", "hail"], ["القطيف", "eastern"], ["القنفذة", "makkah"], ["القويعية", "riyadh"], ["القيصومة", "hafr"], ["الكامل", "jeddah"], ["الليث", "makkah"], ["المبرز", "ahsa"], ["المجاردة", "asir"], ["المجمعة", "riyadh"], ["المحجر", "jeddah"], ["المخواة", "baha"], ["المدينة", "madinah"], ["المدينه المنورة", "madinah"], ["المذنب", "qassim"], ["المزاحمية", "riyadh"], ["المندق", "baha"], ["المنطقه الشرقية", "eastern"], ["المهد", "madinah"], ["الموية", "taif"], ["الميقات", "madinah"], ["النعيرية", "eastern"], ["النقيع", "bisha"], ["النماص", "asir"], ["الهفوف", "ahsa"], ["الوجة", "tabuk"], ["الوجه الجنوبي", "bisha"], ["املج", "tabuk"], ["بارق", "asir"], ["بحرة", "jeddah"], ["بدر", "madinah"], ["بريدة", "qassim"], ["بقعاء", "hail"], ["بقيق", "eastern"], ["بلجرشي", "baha"], ["بللسمر", "asir"], ["بيش", "jazan"], ["تاروت", "eastern"], ["تثليث", "asir"], ["تربة", "taif"], ["تمير", "riyadh"], ["تنومة", "asir"], ["تيماء", "tabuk"], ["ثادق", "riyadh"], ["ثول", "jeddah"], ["جيزان", "jazan"], ["حايل", "hail"], ["حبونا", "najran"], ["حريملاء", "riyadh"], ["حفرالباطن", "hafr"], ["حقل", "tabuk"], ["حوطه بني تميم", "riyadh"], ["حوطه سدير", "riyadh"], ["خليص", "jeddah"], ["خميس", "asir"], ["خميس مشيط", "asir"], ["خيبر", "madinah"], ["دومه الجندل", "jouf"], ["رابغ", "jeddah"], ["راس تنورة", "eastern"], ["رجال المع", "asir"], ["رفحاء", "northern"], ["رماح", "riyadh"], ["رنية", "taif"], ["رياض الخبرا", "qassim"], ["سراه عبيدة", "asir"], ["سكاكا", "jouf"], ["سيهات", "eastern"], ["شرورة", "najran"], ["شعبه نصاب", "northern"], ["شقراء", "riyadh"], ["صامطة", "jazan"], ["صبيا", "jazan"], ["صفوي", "eastern"], ["ضباء", "tabuk"], ["ضرما", "riyadh"], ["طبرجل", "jouf"], ["طريف", "northern"], ["ظهران الجنوب", "asir"], ["عرعر", "northern"], ["عسفان", "jeddah"], ["عفيف", "riyadh"], ["عنك", "eastern"], ["عنيزة", "qassim"], ["عيون الجوا", "qassim"], ["فرسان", "jazan"], ["قريه العليا", "eastern"], ["قلوة", "baha"], ["محايل", "asir"], ["مكة", "makkah"], ["مكه المكرمة", "makkah"], ["ميسان", "taif"], ["وادي الدواسر", "riyadh"], ["يدمة", "najran"], ["ينبع", "madinah"]], "clusters": {"riyadh": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"], ["c3", "التجمع الثالث"]], "jeddah": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"]]}, "job_types": [["self_operated", "تشغيل ذاتي"], ["civil_service", "خدمة مدنية"]], "transfer_types": [["malak", "نقل ملاك"], ["taklif", "تكليف"], ["any", "أي منهما"]], "genders": [["any", "لا يهم"], ["male", "رجال"], ["female", "نساء"]], "contact_methods": [["telegram", "حسابي في تيليجرام"], ["phone", "رقم جوال"]]};
+const DATA = {"specialty_groups": [{"label": "تمريض ورعاية", "items": [["nursing_specialist", "أخصائي تمريض", 6890], ["patient_care_tech", "فني رعاية مرضى", 4222], ["nursing_tech", "فني تمريض", 2805], ["health_security", "أمن صحي / مساعد صحي", 1421], ["nursing_generic", "تمريض (غير محدد)", 1110]]}, {"label": "أسنان", "items": [["dental_assistant", "فني مساعد طبيب أسنان", 5082], ["dentist", "طبيب أسنان", 3197], ["dental_lab_tech", "فني أسنان / تركيبات", 176], ["dental_hygiene", "وقاية أسنان", 0]]}, {"label": "مختبرات وأشعة", "items": [["lab", "مختبر", 1761], ["radiology", "أشعة", 1608], ["ecg_tech", "فني تخطيط قلب", 722]]}, {"label": "صيدلة وتغذية", "items": [["pharmacy", "صيدلة", 2037], ["nutrition", "تغذية", 1256]]}, {"label": "طب وعمليات", "items": [["sterilization_tech", "فني تعقيم", 1347], ["family_medicine", "طب أسرة", 768], ["emergency_med_tech", "فني طب طوارئ", 630], ["general_practitioner", "طبيب عام", 339], ["resident_physician", "طبيب مقيم", 288], ["operating_room", "فني عمليات", 210], ["anesthesia", "تخدير", 162], ["orthopedic_tech", "فني تجبير", 28]]}, {"label": "علاج وتأهيل", "items": [["physiotherapy", "علاج طبيعي", 1517], ["psychology", "أخصائي نفسي", 143], ["optometry", "بصريات", 91], ["respiratory", "علاج تنفسي", 84], ["speech_therapy", "نطق وتخاطب", 70], ["occupational_therapy", "علاج وظيفي", 59]]}, {"label": "إداري ومعلومات", "items": [["administrative", "إداري", 475], ["health_informatics", "معلوماتية صحية", 463], ["health_admin", "إدارة صحية", 299], ["medical_secretary", "سكرتارية طبية", 283], ["medical_records", "سجلات طبية", 178], ["accounting", "محاسب", 82], ["medical_coding", "ترميز طبي", 65], ["it", "حاسب / تقنية معلومات", 63], ["human_resources", "شؤون الموظفين", 54], ["health_insurance", "تأمين صحي", 26]]}, {"label": "صحة عامة وأخرى", "items": [["epidemiology", "وبائيات", 324], ["public_health", "صحة عامة", 294], ["disaster_mgmt", "إدارة كوارث", 110], ["social_work", "أخصائي اجتماعي", 59], ["biomedical_eng", "أجهزة طبية", 48], ["engineering", "هندسة", 12]]}], "areas": [["riyadh", "الرياض"], ["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"], ["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"], ["qassim", "القصيم"], ["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"], ["hail", "حائل"], ["tabuk", "تبوك"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]], "area_region": {"riyadh": "الرياض", "jeddah": "مكة المكرمة", "makkah": "مكة المكرمة", "taif": "مكة المكرمة", "madinah": "المدينة المنورة", "eastern": "الشرقية", "ahsa": "الشرقية", "hafr": "الشرقية", "qassim": "القصيم", "asir": "عسير", "bisha": "عسير", "jazan": "جازان", "najran": "نجران", "baha": "الباحة", "hail": "حائل", "tabuk": "تبوك", "northern": "الحدود الشمالية", "jouf": "الجوف", "qurayyat": "الجوف"}, "area_groups": [{"label": "الوسطى", "items": [["riyadh", "الرياض"], ["qassim", "القصيم"]]}, {"label": "الغربية", "items": [["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"], ["madinah", "المدينة المنورة"]]}, {"label": "الشرقية", "items": [["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"]]}, {"label": "الجنوبية", "items": [["asir", "عسير"], ["bisha", "بيشة"], ["jazan", "جازان"], ["najran", "نجران"], ["baha", "الباحة"]]}, {"label": "الشمالية", "items": [["tabuk", "تبوك"], ["hail", "حائل"], ["northern", "الحدود الشمالية"], ["jouf", "الجوف"], ["qurayyat", "القريات"]]}], "places": [["ابها", "asir"], ["ابو عريش", "jazan"], ["احد المسارحة", "jazan"], ["احد رفيدة", "asir"], ["اضم", "jeddah"], ["الاحساء", "ahsa"], ["الاحمر", "riyadh"], ["الاسياح", "qassim"], ["الافلاج", "riyadh"], ["البدايع", "qassim"], ["البدع", "tabuk"], ["البكيرية", "qassim"], ["الثغر", "jeddah"], ["الجبيل", "eastern"], ["الجموم", "makkah"], ["الحريق", "riyadh"], ["الحناكية", "madinah"], ["الخبر", "eastern"], ["الخرج", "riyadh"], ["الخرمة", "taif"], ["الخفجي", "eastern"], ["الدرب", "jazan"], ["الدرعية", "riyadh"], ["الدمام", "eastern"], ["الدوادمي", "riyadh"], ["الرس", "qassim"], ["الزلفي", "riyadh"], ["السليل", "riyadh"], ["الشرايع", "makkah"], ["الشنان", "hail"], ["الطايف", "taif"], ["الطوال", "jazan"], ["الظهران", "eastern"], ["العارضة", "jazan"], ["العقيق", "baha"], ["العلا", "madinah"], ["الغاط", "riyadh"], ["الغزالة", "hail"], ["القطيف", "eastern"], ["القنفذة", "makkah"], ["القويعية", "riyadh"], ["القيصومة", "hafr"], ["الكامل", "jeddah"], ["الليث", "makkah"], ["المبرز", "ahsa"], ["المجاردة", "asir"], ["المجمعة", "riyadh"], ["المحجر", "jeddah"], ["المخواة", "baha"], ["المدينة", "madinah"], ["المدينه المنورة", "madinah"], ["المذنب", "qassim"], ["المزاحمية", "riyadh"], ["المندق", "baha"], ["المنطقه الشرقية", "eastern"], ["المهد", "madinah"], ["الموية", "taif"], ["الميقات", "madinah"], ["النعيرية", "eastern"], ["النقيع", "bisha"], ["النماص", "asir"], ["الهفوف", "ahsa"], ["الوجة", "tabuk"], ["الوجه الجنوبي", "bisha"], ["املج", "tabuk"], ["بارق", "asir"], ["بحرة", "jeddah"], ["بدر", "madinah"], ["بريدة", "qassim"], ["بقعاء", "hail"], ["بقيق", "eastern"], ["بلجرشي", "baha"], ["بللسمر", "asir"], ["بيش", "jazan"], ["تاروت", "eastern"], ["تثليث", "asir"], ["تربة", "taif"], ["تمير", "riyadh"], ["تنومة", "asir"], ["تيماء", "tabuk"], ["ثادق", "riyadh"], ["ثول", "jeddah"], ["جيزان", "jazan"], ["حايل", "hail"], ["حبونا", "najran"], ["حريملاء", "riyadh"], ["حفرالباطن", "hafr"], ["حقل", "tabuk"], ["حوطه بني تميم", "riyadh"], ["حوطه سدير", "riyadh"], ["خليص", "jeddah"], ["خميس", "asir"], ["خميس مشيط", "asir"], ["خيبر", "madinah"], ["دومه الجندل", "jouf"], ["رابغ", "jeddah"], ["راس تنورة", "eastern"], ["رجال المع", "asir"], ["رفحاء", "northern"], ["رماح", "riyadh"], ["رنية", "taif"], ["رياض الخبرا", "qassim"], ["سراه عبيدة", "asir"], ["سكاكا", "jouf"], ["سيهات", "eastern"], ["شرورة", "najran"], ["شعبه نصاب", "northern"], ["شقراء", "riyadh"], ["صامطة", "jazan"], ["صبيا", "jazan"], ["صفوي", "eastern"], ["ضباء", "tabuk"], ["ضرما", "riyadh"], ["طبرجل", "jouf"], ["طريف", "northern"], ["ظهران الجنوب", "asir"], ["عرعر", "northern"], ["عسفان", "jeddah"], ["عفيف", "riyadh"], ["عنك", "eastern"], ["عنيزة", "qassim"], ["عيون الجوا", "qassim"], ["فرسان", "jazan"], ["قريه العليا", "eastern"], ["قلوة", "baha"], ["محايل", "asir"], ["مكة", "makkah"], ["مكه المكرمة", "makkah"], ["ميسان", "taif"], ["وادي الدواسر", "riyadh"], ["يدمة", "najran"], ["ينبع", "madinah"]], "admin_groups": [{"label": "الرياض", "items": [["riyadh", "الرياض"]], "multi": false}, {"label": "مكة المكرمة", "items": [["jeddah", "جدة"], ["makkah", "مكة المكرمة"], ["taif", "الطائف"]], "multi": true}, {"label": "المدينة المنورة", "items": [["madinah", "المدينة المنورة"]], "multi": false}, {"label": "الشرقية", "items": [["eastern", "الشرقية"], ["ahsa", "الأحساء"], ["hafr", "حفر الباطن"]], "multi": true}, {"label": "القصيم", "items": [["qassim", "القصيم"]], "multi": false}, {"label": "عسير", "items": [["asir", "عسير"], ["bisha", "بيشة"]], "multi": true}, {"label": "جازان", "items": [["jazan", "جازان"]], "multi": false}, {"label": "نجران", "items": [["najran", "نجران"]], "multi": false}, {"label": "الباحة", "items": [["baha", "الباحة"]], "multi": false}, {"label": "حائل", "items": [["hail", "حائل"]], "multi": false}, {"label": "تبوك", "items": [["tabuk", "تبوك"]], "multi": false}, {"label": "الحدود الشمالية", "items": [["northern", "الحدود الشمالية"]], "multi": false}, {"label": "الجوف", "items": [["jouf", "الجوف"], ["qurayyat", "القريات"]], "multi": true}], "clusters": {"riyadh": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"], ["c3", "التجمع الثالث"]], "jeddah": [["c1", "التجمع الأول"], ["c2", "التجمع الثاني"]]}, "job_types": [["self_operated", "تشغيل ذاتي"], ["civil_service", "خدمة مدنية"]], "transfer_types": [["malak", "نقل ملاك"], ["taklif", "تكليف"], ["any", "أي منهما"]], "genders": [["any", "لا يهم"], ["male", "رجال"], ["female", "نساء"]], "contact_methods": [["telegram", "حسابي في تيليجرام"], ["phone", "رقم جوال"]]};
 
 const tg = window.Telegram && window.Telegram.WebApp;
 // telegram-web-app.js defines window.Telegram in *any* browser, so its mere
@@ -499,9 +500,10 @@ const radio = name => (document.querySelector(`input[name=${name}]:checked`) || 
 /* ---------------- searchable picker sheet ---------------- */
 let sheetEl = null;
 
-function openPicker({title, groups, current, placeholder, onPick, multi, selected}) {
+function openPicker({title, groups, current, placeholder, onPick, multi, selected, locked}) {
   closePicker();
   const chosen = new Set(selected || []);
+  const lockedSet = new Set(locked || []);
   const scrim = document.createElement("div");
   scrim.className = "scrim";
   const sheet = document.createElement("div");
@@ -541,12 +543,19 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
       for (const it of hits) {
         if (!it.pinned) shown++;        // a pinned row is never a search "hit"
         const row = document.createElement("div");
-        const on = multi ? chosen.has(it.key) : it.key === current;
+        const isLocked = lockedSet.has(it.key);
+        const on = multi ? (isLocked || chosen.has(it.key)) : it.key === current;
         row.className = "sheet-item" + (on ? " sel" : "") + (it.pinned ? " pinned" : "");
         const name = document.createElement("span");
         // Echo what they typed, so choosing أخرى visibly keeps their words.
         name.textContent = it.pinned && typed ? `أخرى — «${typed}»` : it.label;
         row.appendChild(name);
+        if (isLocked) {
+          const tag = document.createElement("span");
+          tag.className = "n";
+          tag.textContent = "تخصصك — مضمّن دائماً";
+          row.appendChild(tag);
+        }
         if (it.n) {
           const n = document.createElement("span");
           n.className = "n";
@@ -555,6 +564,7 @@ function openPicker({title, groups, current, placeholder, onPick, multi, selecte
         }
         row.addEventListener("click", () => {
           haptic();
+          if (isLocked) return;             // the user's own specialty stays in
           if (!multi) { onPick(it, typed); closePicker(); return; }
           if (chosen.has(it.key)) chosen.delete(it.key); else chosen.add(it.key);
           row.classList.toggle("sel", chosen.has(it.key));
@@ -617,24 +627,38 @@ bindPicker("pick-origin_area", "origin_area", "اختر المدينة", AREAS_P
 
 // The accepted-swap list is the same picker in multi mode, writing through to
 // the hidden checkboxes so checked("accepts") keeps working untouched.
-$("pick-accepts").addEventListener("click", () => openPicker({
+$("pick-accepts").addEventListener("click", () => {
+  // Swapping with one's own specialty is the default fact of the system, so
+  // the sheet shows it pre-selected and unremovable — the confusion this row
+  // caused was people thinking they had to add their own title here.
+  if (!$("specialty").value) {
+    const f = $("fs-specialty");
+    f.classList.add("invalid");
+    f.scrollIntoView({behavior: "smooth", block: "center"});
+    haptic("medium");
+    return;
+  }
+  openPicker({
   title: "أقبل التبادل مع", groups: SPECIALTIES, placeholder: "ابحث عن تخصص…",
-  multi: true, selected: checked("accepts"),
+  multi: true, selected: checked("accepts"), locked: [$("specialty").value],
   onPick: keys => {
     const want = new Set(keys);
     for (const i of $("accepts").querySelectorAll("input")) i.checked = want.has(i.value);
     acceptsLabel();
   },
-}));
+  });
+});
 
 function acceptsLabel() {
-  const on = checked("accepts");
   const btn = $("pick-accepts");
-  const label = k => (SPECIALTIES.flatMap(g => g.items).find(i => i.key === k) || {}).label || k;
-  btn.textContent = !on.length ? "لا شيء"
-    : on.length <= 2 ? on.map(label).join("، ")
-    : `${AR(on.length)} تخصصات`;
-  btn.classList.toggle("empty", !on.length);
+  if (!$("specialty").value) {
+    btn.textContent = "اختر تخصصك أولاً";
+    btn.classList.add("empty");
+    return;
+  }
+  const n = checked("accepts").length;
+  btn.textContent = n ? `تخصصك + ${AR(n)}` : "تخصصك فقط";
+  btn.classList.remove("empty");
 }
 
 /* ---------------- pills ---------------- */
@@ -669,32 +693,62 @@ chips($("contact_method"), "contact_method", DATA.contact_methods, "radio");
 const anyGender = document.querySelector('input[name=gender][value=any]');
 if (anyGender) { anyGender.checked = true; anyGender.closest(".chip").classList.add("on"); }
 
-// --- destinations, grouped by region with a whole-region shortcut
-for (const g of AREA_GROUPS) {
+// --- destinations, grouped by the 13 المناطق الإدارية ------------------------
+// Nine regions hold a single area, so that one chip IS the whole region; they
+// share the first group. The four multi-area regions get their own block with
+// a whole-region toggle — one tap for "any city in منطقة مكة المكرمة".
+const regionName = l => l === "الشرقية" ? "المنطقة الشرقية" : "منطقة " + l;
+
+{
+  const singles = DATA.admin_groups.filter(g => !g.multi);
   const wrap = document.createElement("div");
   wrap.className = "region";
   const head = document.createElement("div");
   head.className = "region-head";
   const b = document.createElement("b");
-  b.textContent = g.label;
+  b.textContent = "مناطق — كل خيار يشمل منطقته كاملة";
+  head.append(b);
+  const box = document.createElement("div");
+  box.className = "chips";
+  for (const g of singles) for (const [k, l] of g.items)
+    box.appendChild(chip("destinations", k, l, "checkbox"));
+  wrap.append(head, box);
+  $("destinations").appendChild(wrap);
+}
+
+for (const g of DATA.admin_groups.filter(g => g.multi)) {
+  const wrap = document.createElement("div");
+  wrap.className = "region";
+  const head = document.createElement("div");
+  head.className = "region-head";
+  const b = document.createElement("b");
+  b.textContent = regionName(g.label);
   const all = document.createElement("button");
-  all.type = "button"; all.className = "all"; all.textContent = "تحديد الكل";
+  all.type = "button"; all.className = "all";
   head.append(b, all);
   const box = document.createElement("div");
   box.className = "chips";
-  for (const it of g.items) box.appendChild(chip("destinations", it.key, it.label, "checkbox"));
+  for (const [k, l] of g.items) box.appendChild(chip("destinations", k, l, "checkbox"));
+  // The toggle's label always states what pressing it does next, and it is
+  // re-derived whenever a member chip is flipped by hand.
+  const refresh = () => {
+    const inputs = [...box.querySelectorAll("input")];
+    all.textContent = inputs.every(i => i.checked) ? "إلغاء المنطقة" : "المنطقة كاملة";
+  };
   all.addEventListener("click", () => {
     const inputs = [...box.querySelectorAll("input")];
-    const turnOn = !inputs.every(i => i.checked);   // toggles the whole region
+    const turnOn = !inputs.every(i => i.checked);
     inputs.forEach(i => {
       i.checked = turnOn;
       i.closest(".chip").classList.toggle("on", turnOn);
     });
-    all.textContent = turnOn ? "إلغاء الكل" : "تحديد الكل";
+    refresh();
     haptic("medium");
     $("fs-destinations").classList.remove("invalid");
     progress();
   });
+  box.addEventListener("change", refresh);
+  refresh();
   wrap.append(head, box);
   $("destinations").appendChild(wrap);
 }
@@ -713,7 +767,7 @@ const PLACE_GROUPS = (() => {
 })();
 
 $("find-city").addEventListener("click", () => openPicker({
-  title: "ابحث عن مدينتك", groups: PLACE_GROUPS,
+  title: "المدينة المرغوب الانتقال إليها", groups: PLACE_GROUPS,
   placeholder: "مثال: ينبع، الخرج، بريدة…",
   onPick: it => {
     const input = document.querySelector(`input[name=destinations][value=${it.key}]`);
