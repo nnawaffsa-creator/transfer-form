@@ -147,6 +147,7 @@ function blockerText(b) {
   if (b.k === "job")      return "نوع الوظيفة مختلف (" + (LABELS.job_types[b.v] || b.v) + ")";
   if (b.k === "transfer") return "نوع النقل مختلف (" + (LABELS.transfer_types[b.v] || b.v) + ")";
   if (b.k === "grade")    return "المرتبة مختلفة (" + AR(b.v) + ")";
+  if (b.k === "spec")     return "تخصصه «" + spec(b.v) + "» — تأكد أنه يقبل التبادل مع تخصصك";
   if (b.k === "area")     return "طلبه مكتوب «" + area(b.v) + "» — تأكد أنه يقبل " + area(b.m);
   return "";
 }
