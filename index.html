@@ -694,27 +694,11 @@ const anyGender = document.querySelector('input[name=gender][value=any]');
 if (anyGender) { anyGender.checked = true; anyGender.closest(".chip").classList.add("on"); }
 
 // --- destinations, grouped by the 13 المناطق الإدارية ------------------------
-// Nine regions hold a single area, so that one chip IS the whole region; they
-// share the first group. The four multi-area regions get their own block with
-// a whole-region toggle — one tap for "any city in منطقة مكة المكرمة".
+// The four multi-area regions come first, most-wanted first — منطقة مكة
+// المكرمة alone draws 25,321 destination mentions, 2.7x the runner-up — each
+// with a whole-region toggle. The nine single-area regions follow as one
+// group: there, the chip IS the whole region.
 const regionName = l => l === "الشرقية" ? "المنطقة الشرقية" : "منطقة " + l;
-
-{
-  const singles = DATA.admin_groups.filter(g => !g.multi);
-  const wrap = document.createElement("div");
-  wrap.className = "region";
-  const head = document.createElement("div");
-  head.className = "region-head";
-  const b = document.createElement("b");
-  b.textContent = "مناطق — كل خيار يشمل منطقته كاملة";
-  head.append(b);
-  const box = document.createElement("div");
-  box.className = "chips";
-  for (const g of singles) for (const [k, l] of g.items)
-    box.appendChild(chip("destinations", k, l, "checkbox"));
-  wrap.append(head, box);
-  $("destinations").appendChild(wrap);
-}
 
 for (const g of DATA.admin_groups.filter(g => g.multi)) {
   const wrap = document.createElement("div");
@@ -749,6 +733,23 @@ for (const g of DATA.admin_groups.filter(g => g.multi)) {
   });
   box.addEventListener("change", refresh);
   refresh();
+  wrap.append(head, box);
+  $("destinations").appendChild(wrap);
+}
+
+{
+  const singles = DATA.admin_groups.filter(g => !g.multi);
+  const wrap = document.createElement("div");
+  wrap.className = "region";
+  const head = document.createElement("div");
+  head.className = "region-head";
+  const b = document.createElement("b");
+  b.textContent = "مناطق — كل خيار يشمل منطقته كاملة";
+  head.append(b);
+  const box = document.createElement("div");
+  box.className = "chips";
+  for (const g of singles) for (const [k, l] of g.items)
+    box.appendChild(chip("destinations", k, l, "checkbox"));
   wrap.append(head, box);
   $("destinations").appendChild(wrap);
 }
