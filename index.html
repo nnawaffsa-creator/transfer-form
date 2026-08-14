@@ -122,6 +122,7 @@
     transition: background .14s, color .14s, transform .1s;
   }
   .chip:active { transform: scale(.94); }
+  .chip.disabled { opacity: .35; pointer-events: none; }
   .chip input { position: absolute; opacity: 0; width: 0; height: 0; }
   .chip.on {
     background: var(--accent); color: var(--accent-fg); font-weight: 600;
@@ -758,11 +759,11 @@ for (const g of DATA.admin_groups.filter(g => g.multi)) {
   // The toggle's label always states what pressing it does next, and it is
   // re-derived whenever a member chip is flipped by hand.
   const refresh = () => {
-    const inputs = [...box.querySelectorAll("input")];
-    all.textContent = inputs.every(i => i.checked) ? "إلغاء المنطقة" : "المنطقة كاملة";
+    const inputs = [...box.querySelectorAll("input:not(:disabled)")];
+    all.textContent = inputs.length && inputs.every(i => i.checked) ? "إلغاء المنطقة" : "المنطقة كاملة";
   };
   all.addEventListener("click", () => {
-    const inputs = [...box.querySelectorAll("input")];
+    const inputs = [...box.querySelectorAll("input:not(:disabled)")];
     const turnOn = !inputs.every(i => i.checked);
     inputs.forEach(i => {
       i.checked = turnOn;
@@ -815,6 +816,12 @@ $("find-city").addEventListener("click", () => openPicker({
   onPick: it => {
     const input = document.querySelector(`input[name=destinations][value=${it.key}]`);
     if (!input) return;
+    if (input.disabled) {
+      const note = $("city-note");
+      note.textContent = "هذه مدينتك الحالية — لا تصلح وجهة.";
+      note.classList.remove("hidden");
+      return;
+    }
     input.checked = true;
     input.closest(".chip").classList.add("on");
     const areaLabel = DATA.areas.find(a => a[0] === it.key)[1];
@@ -917,6 +924,24 @@ for (const id of ["facility", "phone", "specialty_other", "origin_area_other"]) 
     progress();
   });
 }
+
+// The user's own city is a valid destination only for a cross-cluster move
+// inside Riyadh or Jeddah, and only once their تجمع is chosen — everywhere
+// else the matcher ignores it, so the chip must not be selectable at all.
+function syncOwnCityChip() {
+  const area = $("origin_area").value;
+  const cluster = $("origin_cluster").value;
+  const ok = !!DATA.clusters[area] && cluster && cluster !== "other";
+  for (const i of document.querySelectorAll("input[name=destinations]")) {
+    if (i.value !== area) { i.disabled = false; i.closest(".chip").classList.remove("disabled"); continue; }
+    if (!ok && i.checked) { i.checked = false; i.closest(".chip").classList.remove("on"); }
+    i.disabled = !ok;
+    i.closest(".chip").classList.toggle("disabled", !ok);
+  }
+  progress();
+}
+$("origin_area").addEventListener("change", syncOwnCityChip);
+$("origin_cluster").addEventListener("change", syncOwnCityChip);
 
 renderAccepts();
 progress();
